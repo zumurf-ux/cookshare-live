@@ -11,6 +11,14 @@ npm run dev
 - 사용자 앱: `http://127.0.0.1:4174/app`
 - 운영자 콘솔: `http://127.0.0.1:4174/admin`
 
+## 외부 테스트
+
+GitHub Pages 배포 후 저장소 기본 주소에서 사용자 앱과 운영자 콘솔을 선택할 수 있습니다.
+
+- 진입 페이지: `https://zumurf-ux.github.io/cookshare-live/`
+- 사용자 앱: `https://zumurf-ux.github.io/cookshare-live/outputs/cookshare-android-user-app.html`
+- 운영자 콘솔: `https://zumurf-ux.github.io/cookshare-live/outputs/cookshare-operator-admin-web.html`
+
 사용자 앱과 운영자 콘솔은 같은 출처의 브라우저 저장소를 사용하므로 게시물, 주문, 포인트, 신고 상태가 서로 반영됩니다.
 
 ## 디자인 규칙

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f2f2f7">
+  <title>오늘한입 · 테스트 선택</title>
+  <style>
+    :root { color-scheme: light; font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #f2f2f7; color: #111114; }
+    main { width: min(100%, 560px); }
+    h1 { margin: 0; font-size: clamp(28px, 7vw, 40px); letter-spacing: -.05em; }
+    p { margin: 10px 0 28px; color: #63636b; line-height: 1.6; }
+    nav { display: grid; gap: 12px; }
+    a { min-height: 84px; display: grid; align-content: center; gap: 5px; padding: 18px 20px; border: 1px solid #e5e5ea; border-radius: 18px; background: #fff; color: #111114; text-decoration: none; }
+    a:focus-visible { outline: 3px solid rgba(8,123,255,.3); outline-offset: 3px; }
+    a:hover { border-color: #087bff; }
+    strong { font-size: 17px; }
+    span { color: #74747c; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>오늘한입</h1>
+    <p>테스트할 서비스를 선택하세요. 사용자 앱과 운영자 콘솔은 같은 브라우저 저장소의 데이터를 공유합니다.</p>
+    <nav aria-label="테스트 화면 선택">
+      <a href="outputs/cookshare-android-user-app.html"><strong>사용자 앱</strong><span>레시피, 피드, 기록, 마켓, 내 정보</span></a>
+      <a href="outputs/cookshare-operator-admin-web.html"><strong>운영자 콘솔</strong><span>대시보드, 회원, 콘텐츠, 신고, 주문 관리</span></a>
+    </nav>
+  </main>
+</body>
+</html>
