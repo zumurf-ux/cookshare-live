@@ -1,0 +1,10 @@
+{
+  "name": "cookshare-live",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node outputs/cookshare-live-server.mjs",
+    "dev:live": "node outputs/cookshare-live-server.mjs",
+    "check": "node --check outputs/cookshare-user-app-live.js && node --check outputs/cookshare-operator-admin-live.js && node --check outputs/cookshare-live-server.mjs"
+  }
+}

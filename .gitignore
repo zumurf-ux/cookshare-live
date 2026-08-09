@@ -1,0 +1,5 @@
+node_modules/
+.gh-auth*
+.DS_Store
+Thumbs.db
+npm-debug.log*
