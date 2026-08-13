@@ -1333,12 +1333,13 @@ body.recipe-reference-page {
 }
 .recipe-reference-page .story::before {
   position: absolute;
-  top: 19px;
+  top: 22px;
   left: 18px;
-  width: 28px;
-  height: 3px;
-  border-radius: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: #ef6b2d;
+  box-shadow: 0 0 0 5px #ffead7;
   content: "";
 }
 .recipe-reference-page .story .story-mark,
