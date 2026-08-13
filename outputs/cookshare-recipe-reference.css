@@ -1768,6 +1768,43 @@ body.recipe-reference-page {
   .recipe-reference-page .app-main { height: auto; }
 }
 
+.recipe-reference-page .category-row {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+  padding: 0;
+}
+.recipe-reference-page .recipe-filter-group {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+.recipe-reference-page .recipe-filter-group > strong {
+  color: #68706c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.recipe-reference-page .recipe-filter-group > div {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.recipe-reference-page .recipe-filter-group > div::-webkit-scrollbar { display: none; }
+.recipe-reference-page .recipe-filter-group .chip { flex: 0 0 auto; }
+.recipe-reference-page .field-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+.recipe-reference-page .field-grid .field { min-width: 0; }
+
+@media (max-width: 479px) {
+  .recipe-reference-page .field-grid { grid-template-columns: 1fr; gap: 0; }
+}
+
 /* Premium minimal visual skin. Structure and interactions remain unchanged. */
 body.recipe-reference-page {
   --recipe-orange: #f06a24;

@@ -36,12 +36,12 @@
   };
 
   const recipes = [
-    { id: "r1", title: "들깨 두유 크림 파스타", author: "민지의 집밥", category: "면요리", time: "15분", likes: 128, icon: "leaf", image: "assets/recipe-tomato-pasta.jpg" },
-    { id: "r2", title: "제철 무 들기름 솥밥", author: "주말식탁", category: "밥요리", time: "35분", likes: 94, icon: "lunch", image: "assets/recipe-ricotta-salad.jpg" },
-    { id: "r3", title: "애호박 명란 덮밥", author: "도시락 연구소", category: "밥요리", time: "20분", likes: 1220, icon: "chef", image: "assets/recipe-shrimp-taco.jpg" },
-    { id: "r4", title: "매콤 두부 강정", author: "15분 요리", category: "반찬", time: "25분", likes: 986, icon: "fire", image: "assets/recipe-cheese-burger.jpg" },
-    { id: "r5", title: "봄동 된장국", author: "제철 한 끼", category: "국물", time: "30분", likes: 734, icon: "leaf", image: "assets/recipe-onion-soup.jpg" },
-    { id: "r6", title: "바나나 오트밀 쿠키", author: "민지의 집밥", category: "간식", time: "40분", likes: 612, icon: "clock", image: "assets/recipe-oat-cookie.jpg" }
+    { id: "r1", title: "들깨 두유 크림 파스타", author: "민지의 집밥", category: "면", cuisine: "양식", time: "15분", likes: 128, icon: "leaf", image: "assets/recipe-tomato-pasta.jpg" },
+    { id: "r2", title: "제철 무 들기름 솥밥", author: "주말식탁", category: "밥", cuisine: "한식", time: "35분", likes: 94, icon: "lunch", image: "assets/recipe-ricotta-salad.jpg" },
+    { id: "r3", title: "애호박 명란 덮밥", author: "도시락 연구소", category: "밥", cuisine: "일식", time: "20분", likes: 1220, icon: "chef", image: "assets/recipe-shrimp-taco.jpg" },
+    { id: "r4", title: "매콤 두부 강정", author: "15분 요리", category: "반찬", cuisine: "중식", time: "25분", likes: 986, icon: "fire", image: "assets/recipe-cheese-burger.jpg" },
+    { id: "r5", title: "봄동 된장국", author: "제철 한 끼", category: "탕·찌개", cuisine: "한식", time: "30분", likes: 734, icon: "leaf", image: "assets/recipe-onion-soup.jpg" },
+    { id: "r6", title: "바나나 오트밀 쿠키", author: "민지의 집밥", category: "간식", cuisine: "기타", time: "40분", likes: 612, icon: "clock", image: "assets/recipe-oat-cookie.jpg" }
   ];
 
   const products = [
@@ -81,6 +81,10 @@
   const money = value => `${Number(value).toLocaleString("ko-KR")}원`;
   const uid = prefix => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const icon = (name, className = "icon") => `<svg class="${className}" aria-hidden="true" viewBox="0 0 24 24">${iconPaths[name] || iconPaths.image}</svg>`;
+  const recipeTypes = ["밥", "면", "반찬", "탕·찌개", "간식"];
+  const cuisineTypes = ["양식", "일식", "한식", "중식", "기타"];
+  const normalizeRecipeType = value => ({ 밥요리: "밥", 면요리: "면", 국물: "탕·찌개" })[value] || value || "기타";
+  const normalizeCuisine = value => cuisineTypes.includes(value) ? value : "기타";
 
   function loadState() {
     try {
@@ -92,6 +96,7 @@
   let state = loadState();
   let currentScreen = "home";
   let currentRecipeFilter = "전체";
+  let currentCuisineFilter = "전체";
   let toastTimer;
   let challengeBannerObserver;
 
@@ -187,14 +192,15 @@
 
 
   function renderRecipeCategories() {
-    const categories = ["전체", ...new Set(recipes.map(recipe => recipe.category))];
-    $("[data-recipe-categories]").innerHTML = categories.map(category => `<button class="chip ${category === currentRecipeFilter ? "active" : ""}" type="button" data-recipe-category="${esc(category)}">${esc(category)}</button>`).join("");
+    const typeOptions = ["전체", ...recipeTypes];
+    const cuisineOptions = ["전체", ...cuisineTypes];
+    $("[data-recipe-categories]").innerHTML = `<div class="recipe-filter-group"><strong>요리 종류</strong><div>${typeOptions.map(category => `<button class="chip ${category === currentRecipeFilter ? "active" : ""}" type="button" data-recipe-category="${esc(category)}">${esc(category)}</button>`).join("")}</div></div><div class="recipe-filter-group"><strong>카테고리</strong><div>${cuisineOptions.map(cuisine => `<button class="chip ${cuisine === currentCuisineFilter ? "active" : ""}" type="button" data-recipe-cuisine="${esc(cuisine)}">${esc(cuisine)}</button>`).join("")}</div></div>`;
   }
 
   function renderRecipes() {
     const query = ($("[data-recipe-search]")?.value || "").trim().toLowerCase();
-    const filtered = recipes.filter(recipe => (currentRecipeFilter === "전체" || recipe.category === currentRecipeFilter) && `${recipe.title} ${recipe.author} ${recipe.category}`.toLowerCase().includes(query));
-    $("[data-recipe-grid]").innerHTML = filtered.length ? filtered.map(recipe => `<button class="recipe-card" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span class="recipe-thumb"><img src="${esc(recipe.image)}" alt="" loading="lazy"></span><span class="recipe-copy"><strong>${esc(recipe.title)}</strong><span>${esc(recipe.author)} · ${esc(recipe.time)}</span></span></button>`).join("") : '<div class="card empty" style="grid-column:1/-1"><strong>검색 결과가 없습니다</strong>다른 재료나 요리 이름으로 검색해 보세요.</div>';
+    const filtered = recipes.filter(recipe => (currentRecipeFilter === "전체" || normalizeRecipeType(recipe.category) === currentRecipeFilter) && (currentCuisineFilter === "전체" || normalizeCuisine(recipe.cuisine) === currentCuisineFilter) && `${recipe.title} ${recipe.author} ${normalizeRecipeType(recipe.category)} ${normalizeCuisine(recipe.cuisine)}`.toLowerCase().includes(query));
+    $("[data-recipe-grid]").innerHTML = filtered.length ? filtered.map(recipe => `<button class="recipe-card" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span class="recipe-thumb"><img src="${esc(recipe.image)}" alt="" loading="lazy"></span><span class="recipe-copy"><strong>${esc(recipe.title)}</strong><span>${esc(normalizeCuisine(recipe.cuisine))} · ${esc(normalizeRecipeType(recipe.category))} · ${esc(recipe.time)}</span></span></button>`).join("") : '<div class="card empty" style="grid-column:1/-1"><strong>검색 결과가 없습니다</strong>다른 요리 종류나 카테고리를 선택해 보세요.</div>';
   }
 
   function renderProducts() {
@@ -224,7 +230,7 @@
   function showRecipe(id) {
     const recipe = recipeById(id);
     const saved = Boolean(state.saved[id]);
-    openSheet("레시피 상세", `<div class="recipe-detail-photo">${recipe.image ? `<img src="${esc(recipe.image)}" alt="${esc(recipe.title)}">` : icon("image", "icon icon-lg")}</div><article class="hero-card"><p class="eyebrow">${esc(recipe.category || "나의 레시피")}</p><h2>${esc(recipe.title)}</h2><p>${esc(recipe.body || `${recipe.author}의 실제 조리 기록입니다. 재료 준비부터 완성까지 순서대로 확인하세요.`)}</p><div class="recipe-meta">${recipeMeta(recipe)}</div></article><div class="section-head"><h2>조리 정보</h2></div><div class="sheet-list"><div class="sheet-row"><span>${icon("clock")}</span><div class="sheet-row-copy"><strong>예상 조리 시간</strong><small>${esc(recipe.time || "20분")}</small></div></div><div class="sheet-row"><span>${icon("user")}</span><div class="sheet-row-copy"><strong>작성자</strong><small>${esc(recipe.author)}</small></div></div></div><div style="height:12px"></div><button class="primary-button full-button" type="button" data-action="save" data-id="${esc(id)}">${saved ? "저장 취소" : "레시피 저장"}</button>`);
+    openSheet("레시피 상세", `<div class="recipe-detail-photo">${recipe.image ? `<img src="${esc(recipe.image)}" alt="${esc(recipe.title)}">` : icon("image", "icon icon-lg")}</div><article class="hero-card"><p class="eyebrow">${esc(normalizeCuisine(recipe.cuisine))} · ${esc(normalizeRecipeType(recipe.category))}</p><h2>${esc(recipe.title)}</h2><p>${esc(recipe.body || `${recipe.author}의 실제 조리 기록입니다. 재료 준비부터 완성까지 순서대로 확인하세요.`)}</p><div class="recipe-meta">${recipeMeta(recipe)}</div></article><div class="section-head"><h2>조리 정보</h2></div><div class="sheet-list"><div class="sheet-row"><span>${icon("clock")}</span><div class="sheet-row-copy"><strong>예상 조리 시간</strong><small>${esc(recipe.time || "20분")}</small></div></div><div class="sheet-row"><span>${icon("user")}</span><div class="sheet-row-copy"><strong>작성자</strong><small>${esc(recipe.author)}</small></div></div></div><div style="height:12px"></div><button class="primary-button full-button" type="button" data-action="save" data-id="${esc(id)}">${saved ? "저장 취소" : "레시피 저장"}</button>`);
   }
 
   function showComments(id) {
@@ -248,7 +254,9 @@
   }
 
   function showCreate(noteOnly = false) {
-    openSheet(noteOnly ? "간단 기록" : "레시피 등록", `<form data-create-form><div class="field"><label for="post-title">제목</label><input id="post-title" name="title" maxlength="60" required placeholder="요리 이름을 입력하세요"></div><div class="field"><label for="post-body">조리법과 이야기</label><textarea id="post-body" name="body" maxlength="1000" required placeholder="재료와 조리 과정을 구체적으로 기록해 주세요"></textarea></div>${noteOnly ? "" : '<div class="field"><label for="post-image">완성 사진</label><input id="post-image" name="image" type="file" accept="image/*"></div>'}<div class="field"><label for="post-category">분류</label><select id="post-category" name="category"><option>밥요리</option><option>면요리</option><option>반찬</option><option>국물</option><option>간식</option></select></div><button class="primary-button full-button" type="submit">게시하기</button><button class="secondary-button full-button" style="margin-top:8px" type="button" data-action="save-draft">임시 저장</button></form>`);
+    const typeOptions = recipeTypes.map(type => `<option value="${esc(type)}">${esc(type)}</option>`).join("");
+    const cuisineOptions = cuisineTypes.map(cuisine => `<option value="${esc(cuisine)}"${cuisine === "한식" ? " selected" : ""}>${esc(cuisine)}</option>`).join("");
+    openSheet(noteOnly ? "간단 기록" : "레시피 등록", `<form data-create-form><div class="field"><label for="post-title">제목</label><input id="post-title" name="title" maxlength="60" required placeholder="요리 이름을 입력하세요"></div><div class="field"><label for="post-body">조리법과 이야기</label><textarea id="post-body" name="body" maxlength="1000" required placeholder="재료와 조리 과정을 구체적으로 기록해 주세요"></textarea></div>${noteOnly ? "" : '<div class="field"><label for="post-image">완성 사진</label><input id="post-image" name="image" type="file" accept="image/*"></div>'}<div class="field-grid"><div class="field"><label for="post-category">요리 종류</label><select id="post-category" name="category" required>${typeOptions}</select></div><div class="field"><label for="post-cuisine">카테고리</label><select id="post-cuisine" name="cuisine" required>${cuisineOptions}</select></div></div><button class="primary-button full-button" type="submit">게시하기</button><button class="secondary-button full-button" style="margin-top:8px" type="button" data-action="save-draft">임시 저장</button></form>`);
   }
 
   function showOrders() {
@@ -302,6 +310,8 @@
     if (nav) return navigate(nav.dataset.nav);
     const category = event.target.closest("[data-recipe-category]");
     if (category) { currentRecipeFilter = category.dataset.recipeCategory; renderRecipeCategories(); renderRecipes(); return; }
+    const cuisine = event.target.closest("[data-recipe-cuisine]");
+    if (cuisine) { currentCuisineFilter = cuisine.dataset.recipeCuisine; renderRecipeCategories(); renderRecipes(); return; }
     const feedFilter = event.target.closest("[data-feed-filter]");
     if (feedFilter) { $$('[data-feed-filter]').forEach(node => node.classList.toggle("active", node === feedFilter)); toast(`${feedFilter.textContent} 피드로 정렬했습니다.`); return; }
     const action = event.target.closest("[data-action]");
@@ -331,7 +341,7 @@
       const file = data.get("image");
       let image = "";
       if (file && file.size) image = await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(file); });
-      const post = { id: uid("post"), author: state.profile.name, handle: `@${state.profile.handle}`, title: data.get("title").trim(), body: data.get("body").trim(), category: data.get("category"), image, likes: 0, icon: "image", time: "방금" };
+      const post = { id: uid("post"), author: state.profile.name, handle: `@${state.profile.handle}`, title: data.get("title").trim(), body: data.get("body").trim(), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), image, likes: 0, icon: "image", time: "방금" };
       state.posts.unshift(post); state.comments[post.id] = []; state.profile.points += 50; saveState(); closeSheet(); navigate("home"); renderFeed(); toast("새 레시피를 게시했습니다.");
     }
   });
@@ -346,7 +356,7 @@
     if (!draftButton) return;
     const form = draftButton.closest("form");
     const data = new FormData(form);
-    state.drafts.unshift({ id: uid("draft"), title: data.get("title"), body: data.get("body"), date: new Date().toLocaleString("ko-KR") });
+    state.drafts.unshift({ id: uid("draft"), title: data.get("title"), body: data.get("body"), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), date: new Date().toLocaleString("ko-KR") });
     saveState(); closeSheet(); toast("임시 저장했습니다.");
   }, true);
 
