@@ -5,8 +5,8 @@
   "start_url": "./cookshare-android-user-app.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f7f6f3",
-  "theme_color": "#ff9800",
+  "background_color": "#fbfaf8",
+  "theme_color": "#fbfaf8",
   "lang": "ko-KR",
   "icons": [
     { "src": "cookshare-app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
