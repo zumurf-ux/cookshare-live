@@ -1,11 +1,11 @@
-const CACHE_NAME = "cookshare-live-v5";
+const CACHE_NAME = "cookshare-live-v7";
 const appUrl = path => new URL(path, self.registration.scope).toString();
 const FALLBACK_URL = appUrl("cookshare-android-user-app.html");
 const APP_FILES = [
   FALLBACK_URL,
   appUrl("cookshare-ui.css?v=4"),
-  appUrl("cookshare-recipe-reference.css?v=1"),
-  appUrl("cookshare-user-app-live.js?v=4"),
+  appUrl("cookshare-recipe-reference.css?v=3"),
+  appUrl("cookshare-user-app-live.js?v=5"),
   appUrl("cookshare-manifest.webmanifest"),
   appUrl("cookshare-app-icon.svg"),
   appUrl("assets/recipe-egg-toast.jpg"),

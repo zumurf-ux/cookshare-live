@@ -4,116 +4,85 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ff9800">
-  <title>오늘한입 · 맞춤 레시피</title>
+  <title>오늘한입 · 사용자 앱</title>
   <link rel="manifest" href="cookshare-manifest.webmanifest">
   <link rel="stylesheet" href="cookshare-ui.css?v=4">
-  <link rel="stylesheet" href="cookshare-recipe-reference.css?v=1">
+  <link rel="stylesheet" href="cookshare-recipe-reference.css?v=3">
 </head>
 <body class="user-page recipe-reference-page">
   <a class="skip-link" href="#app-main">본문으로 이동</a>
   <div class="app-shell">
     <header class="app-topbar recipe-topbar">
-      <div class="topbar-row">
-        <strong class="brand-wordmark">쿠킹</strong>
-        <div class="top-actions">
-          <button class="icon-button" type="button" data-nav="recipes" aria-label="레시피 검색"><span data-icon="search"></span></button>
-          <button class="icon-button badge-host" type="button" data-action="notifications" aria-label="알림"><span data-icon="bell"></span><span class="badge" data-notification-count>3</span></button>
-          <button class="icon-button badge-host" type="button" data-action="cart" aria-label="장바구니"><span data-icon="cart"></span><span class="badge" data-cart-count>0</span></button>
-        </div>
+      <div class="app-title-group">
+        <p>오늘의 식탁을 기록하세요</p>
+        <h1 class="app-title brand-wordmark"><span class="fried-egg-logo" aria-hidden="true"></span><span>오늘한입</span></h1>
       </div>
-      <div class="recommendation-copy">
-        <p data-hero-kicker>오늘 뭐 먹지?</p>
-        <h1 class="app-title" data-hero-title>윤서님을 위한<br>오늘의 메뉴 추천</h1>
-        <span data-hero-subtitle>취향과 조리 시간을 반영한 맞춤 레시피</span>
+      <div class="top-actions">
+        <button class="icon-button badge-host" type="button" data-action="notifications" aria-label="알림"><span data-icon="bell"></span><span class="badge" data-notification-count>3</span></button>
+        <button class="icon-button badge-host" type="button" data-action="cart" aria-label="장바구니"><span data-icon="cart"></span><span class="badge" data-cart-count>0</span></button>
       </div>
-      <span class="hero-progress" aria-label="추천 카드 4개 중 첫 번째">1/4</span>
     </header>
 
     <main class="app-main" id="app-main">
       <section class="screen active" data-screen="home" aria-label="홈">
-        <nav class="cuisine-tabs section" aria-label="요리 유형">
-          <button class="active" type="button" data-cuisine="간단요리">간단요리</button>
-          <button type="button" data-cuisine="메인요리">메인요리</button>
-          <button type="button" data-cuisine="밑반찬">밑반찬</button>
-          <button type="button" data-cuisine="간식">간식</button>
-          <button type="button" data-cuisine="한식">한식</button>
-          <button type="button" data-cuisine="양식">양식</button>
-        </nav>
-
-        <div class="quick-filters section" aria-label="추천 조건">
-          <button class="active" type="button" data-quick-filter="추천순">추천순</button>
-          <button type="button" data-quick-filter="제철">#제철</button>
-          <button type="button" data-quick-filter="15분">#15분완성</button>
-          <button type="button" data-quick-filter="건강식">#건강식</button>
-          <button type="button" data-quick-filter="다이어트">#다이어트</button>
+        <div class="section">
+          <div class="story-row" aria-label="추천 크리에이터">
+            <button class="story" data-action="story" data-name="민지의 집밥"><span class="story-mark" data-icon="user"></span><span>민지의 집밥</span></button>
+            <button class="story" data-action="story" data-name="주말식탁"><span class="story-mark" data-icon="chef"></span><span>주말식탁</span></button>
+            <button class="story" data-action="story" data-name="도시락 연구소"><span class="story-mark" data-icon="lunch"></span><span>도시락 연구소</span></button>
+            <button class="story" data-action="story" data-name="제철 한 끼"><span class="story-mark" data-icon="leaf"></span><span>제철 한 끼</span></button>
+            <button class="story" data-action="story" data-name="15분 요리"><span class="story-mark" data-icon="clock"></span><span>15분 요리</span></button>
+          </div>
         </div>
 
-        <section class="section content-section featured-section" aria-labelledby="featured-title">
-          <div class="section-head"><div><p class="section-kicker">AI 맞춤 추천</p><h2 id="featured-title">지금 만들기 좋은 레시피</h2></div><button class="text-button" type="button" data-nav="recipes">전체 보기</button></div>
-          <div class="featured-recipe-row" data-featured-recipes></div>
-          <div class="carousel-dots" aria-hidden="true"><span class="active"></span><span></span><span></span><span></span></div>
-        </section>
+        <article class="card hero-card section">
+          <p class="eyebrow">이번 주 챌린지</p>
+          <h2>두부 한 모로 만드는<br>든든한 한 끼</h2>
+          <p>8월 15일까지 레시피를 등록하면 우수 참여자에게 마켓 포인트를 드립니다.</p>
+          <div class="hero-actions"><button class="primary-button" type="button" data-action="challenge">챌린지 참여</button><button class="secondary-button" type="button" data-nav="recipes">레시피 보기</button></div>
+        </article>
 
-        <section class="section content-section" aria-labelledby="ingredient-title">
-          <div class="section-head"><div><p class="section-kicker">냉장고 재료 활용</p><h2 id="ingredient-title">재료별 레시피</h2></div><button class="text-button" type="button" data-nav="recipes">더보기</button></div>
-          <div class="ingredient-row" aria-label="재료 선택">
-            <button type="button" data-ingredient="계란"><span class="ingredient-visual egg">계란</span><strong>계란</strong></button>
-            <button type="button" data-ingredient="양파"><span class="ingredient-visual onion">양파</span><strong>양파</strong></button>
-            <button type="button" data-ingredient="마늘"><span class="ingredient-visual garlic">마늘</span><strong>마늘</strong></button>
-            <button type="button" data-ingredient="대파"><span class="ingredient-visual scallion">대파</span><strong>대파</strong></button>
-            <button type="button" data-ingredient="상추"><span class="ingredient-visual lettuce">상추</span><strong>상추</strong></button>
+        <div class="section">
+          <div class="section-head"><h2>오늘의 피드</h2></div>
+          <div class="segmented" role="tablist" aria-label="피드 정렬">
+            <button class="active" type="button" data-feed-filter="recommended">추천</button>
+            <button type="button" data-feed-filter="following">팔로잉</button>
+            <button type="button" data-feed-filter="latest">최신</button>
           </div>
-          <div class="ingredient-recipe-row" data-ingredient-recipes></div>
-        </section>
-
-        <section class="section content-section" aria-labelledby="brand-title">
-          <div class="section-head"><div><p class="section-kicker">공식 파트너 레시피</p><h2 id="brand-title">브랜드 레시피</h2></div><button class="text-button" type="button" data-nav="market">재료 구매</button></div>
-          <div class="brand-recipe-list" data-brand-recipes></div>
-        </section>
-
-        <section class="section content-section" aria-labelledby="appliance-title">
-          <div class="section-head"><div><p class="section-kicker">주방가전 맞춤</p><h2 id="appliance-title">발뮤다 레시피</h2></div><button class="text-button" type="button" data-nav="recipes">더보기</button></div>
-          <div class="appliance-recipe-grid" data-appliance-recipes></div>
-        </section>
-
-        <section class="section content-section community-section" aria-labelledby="community-title">
-          <div class="section-head"><div><p class="section-kicker">사용자 조리 기록</p><h2 id="community-title">오늘의 식탁</h2></div></div>
-          <div class="segmented" role="tablist" aria-label="피드 정렬"><button class="active" type="button" data-feed-filter="recommended">추천</button><button type="button" data-feed-filter="following">팔로잉</button><button type="button" data-feed-filter="latest">최신</button></div>
-          <div class="feed" data-feed></div>
-        </section>
+        </div>
+        <div class="feed" data-feed></div>
       </section>
 
       <section class="screen" data-screen="recipes" aria-label="레시피">
-        <section class="screen-intro section"><p class="section-kicker">나에게 맞는 한 끼</p><h2>재료와 상황으로<br>레시피를 찾아보세요</h2><p>보유 재료, 조리 시간, 메뉴 유형을 조합해 원하는 레시피를 빠르게 찾을 수 있습니다.</p></section>
         <div class="section"><label class="search-box"><span data-icon="search"></span><span class="sr-only">레시피 검색</span><input type="search" data-recipe-search placeholder="재료나 요리 이름으로 검색"></label></div>
         <div class="category-row section" data-recipe-categories></div>
-        <div class="section-head"><div><p class="section-kicker">에디터 추천</p><h2>인기 레시피</h2></div><button class="text-button" type="button" data-action="saved-recipes">저장한 레시피</button></div>
+        <div class="section-head"><h2>인기 레시피</h2><button class="text-button" type="button" data-action="saved-recipes">저장한 레시피</button></div>
         <div class="recipe-grid" data-recipe-grid></div>
       </section>
 
-      <section class="screen" data-screen="create" aria-label="기록">
-        <section class="screen-intro section"><p class="section-kicker">나만의 레시피 북</p><h2>오늘 만든 한 끼를<br>차곡차곡 기록하세요</h2><p>완성 사진과 조리 과정을 남기면 내 레시피와 커뮤니티 게시물로 함께 저장됩니다.</p></section>
+      <section class="screen" data-screen="create" aria-label="작성">
+        <article class="card hero-card section"><p class="eyebrow">새 기록</p><h2>오늘 만든 한 끼를<br>이웃과 나눠보세요</h2><p>사진과 조리 과정을 기록하면 나만의 레시피 보관함에도 자동으로 저장됩니다.</p></article>
         <div class="create-grid">
-          <button class="create-option" type="button" data-action="create-post"><span data-icon="camera"></span><span><strong>사진으로 레시피 등록</strong><small>완성 사진과 재료, 조리법을 함께 기록합니다.</small></span><span data-icon="chevron"></span></button>
-          <button class="create-option" type="button" data-action="create-note"><span data-icon="edit"></span><span><strong>글로 간단히 기록</strong><small>사진 없이 조리 메모와 식사 후기를 남깁니다.</small></span><span data-icon="chevron"></span></button>
-          <button class="create-option" type="button" data-action="drafts"><span data-icon="archive"></span><span><strong>임시 저장한 기록</strong><small>작성 중인 레시피를 이어서 완성합니다.</small></span><span data-icon="chevron"></span></button>
+          <button class="create-option" type="button" data-action="create-post"><span data-icon="camera"></span><span><strong>사진으로 레시피 등록</strong><small>완성 사진과 조리법을 함께 기록합니다.</small></span><span data-icon="chevron"></span></button>
+          <button class="create-option" type="button" data-action="create-note"><span data-icon="edit"></span><span><strong>글로 간단히 기록</strong><small>사진 없이 식사와 조리 메모를 남깁니다.</small></span><span data-icon="chevron"></span></button>
+          <button class="create-option" type="button" data-action="drafts"><span data-icon="archive"></span><span><strong>임시 저장 글</strong><small>작성 중인 기록을 이어서 완성합니다.</small></span><span data-icon="chevron"></span></button>
         </div>
       </section>
 
       <section class="screen" data-screen="market" aria-label="마켓">
-        <section class="screen-intro section"><p class="section-kicker">레시피 연계 장보기</p><h2>필요한 재료를<br>한 번에 준비하세요</h2><p>선택한 레시피에 맞춰 산지와 생산 이력이 확인된 식재료를 추천합니다.</p></section>
         <div class="section"><label class="search-box"><span data-icon="search"></span><span class="sr-only">상품 검색</span><input type="search" data-product-search placeholder="식재료와 주방용품 검색"></label></div>
-        <div class="section-head"><div><p class="section-kicker">오늘 주문하면 내일 도착</p><h2>추천 상품</h2></div><button class="text-button" type="button" data-action="orders">주문 내역</button></div>
+        <article class="card hero-card section"><p class="eyebrow">오늘한입 마켓</p><h2>레시피에 필요한 재료를<br>한 번에 준비하세요</h2><p>산지와 생산 이력이 확인된 식재료를 엄선해 소개합니다.</p></article>
+        <div class="section-head"><h2>추천 상품</h2><button class="text-button" type="button" data-action="orders">주문 내역</button></div>
         <div class="market-grid" data-product-grid></div>
       </section>
 
-      <section class="screen" data-screen="profile" aria-label="내 정보">
-        <article class="profile-card section">
-          <div class="profile-head"><div class="avatar">윤서</div><div class="profile-copy"><p class="section-kicker">나의 요리 프로필</p><h2 data-profile-name>윤서의 식탁</h2><p data-profile-handle>@yoonseo_table · 서울 마포구</p></div><button class="secondary-button" type="button" data-action="edit-profile">수정</button></div>
+      <section class="screen" data-screen="profile" aria-label="프로필">
+        <article class="card profile-card section">
+          <div class="profile-head"><div class="avatar">한끼</div><div class="profile-copy"><h2 data-profile-name>한끼연구소</h2><p data-profile-handle>@one_meal_lab · 서울 마포구</p></div><button class="secondary-button" type="button" data-action="edit-profile">수정</button></div>
         </article>
-        <div class="stat-grid section"><article class="stat-card"><strong data-post-count>0</strong><span>레시피</span></article><article class="stat-card"><strong data-saved-count>0</strong><span>저장</span></article><article class="stat-card"><strong data-point-count>12,450</strong><span>포인트</span></article></div>
-        <div class="menu-list">
-          <button class="menu-row" type="button" data-action="my-posts"><span data-icon="grid"></span><strong>내 레시피</strong><span data-icon="chevron"></span></button>
+        <div class="stat-grid section"><article class="card stat-card"><strong data-post-count>0</strong><span>게시물</span></article><article class="card stat-card"><strong data-saved-count>0</strong><span>저장</span></article><article class="card stat-card"><strong data-point-count>12,450</strong><span>포인트</span></article></div>
+        <div class="card menu-list">
+          <button class="menu-row" type="button" data-action="my-posts"><span data-icon="grid"></span><strong>내 게시물</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="saved-recipes"><span data-icon="bookmark"></span><strong>저장한 레시피</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="orders"><span data-icon="box"></span><strong>주문 내역</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="points"><span data-icon="point"></span><strong>포인트</strong><small data-point-count>12,450</small></button>
@@ -133,6 +102,6 @@
     <div class="sheet-root" data-sheet-root aria-hidden="true"><button class="sheet-backdrop" type="button" data-close-sheet aria-label="창 닫기"></button><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><header class="sheet-head"><span></span><h2 id="sheet-title" data-sheet-title>상세 정보</h2><button class="icon-button" type="button" data-close-sheet aria-label="닫기"><span data-icon="close"></span></button></header><div class="sheet-body" data-sheet-body></div></section></div>
     <div class="toast" role="status" aria-live="polite" data-toast></div>
   </div>
-  <script src="cookshare-user-app-live.js?v=4"></script>
+  <script src="cookshare-user-app-live.js?v=5"></script>
 </body>
 </html>

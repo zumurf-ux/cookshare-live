@@ -58,9 +58,36 @@ body.recipe-reference-page {
 }
 
 .recipe-reference-page .brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -.04em;
+}
+
+.recipe-reference-page .fried-egg-logo {
+  position: relative;
+  width: 27px;
+  height: 21px;
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 58% 42% 48% 52% / 52% 58% 42% 48%;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(136,76,0,.12);
+  transform: rotate(-7deg);
+}
+
+.recipe-reference-page .fried-egg-logo::before {
+  position: absolute;
+  top: 5px;
+  left: 9px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffd052;
+  box-shadow: inset -1px -1px 0 rgba(202,119,0,.18);
+  content: "";
 }
 
 .recipe-reference-page .top-actions { gap: 2px; }
@@ -513,4 +540,175 @@ body.recipe-reference-page {
 
 @media (prefers-reduced-motion: reduce) {
   .recipe-reference-page * { scroll-behavior: auto !important; }
+}
+
+/* Orange recipe skin applied to the original information architecture. */
+.recipe-reference-page .recipe-topbar {
+  position: relative;
+  height: 116px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  overflow: hidden;
+  border-bottom: 0;
+  background: var(--recipe-orange);
+}
+
+.recipe-reference-page .recipe-topbar::after {
+  right: -66px;
+  bottom: -92px;
+  width: 176px;
+  height: 176px;
+  border-width: 34px;
+}
+
+.recipe-reference-page .app-title-group,
+.recipe-reference-page .top-actions { position: relative; z-index: 1; }
+
+.recipe-reference-page .app-title-group p {
+  margin: 0 0 7px;
+  color: rgba(255,255,255,.78);
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+
+.recipe-reference-page .brand-wordmark {
+  gap: 9px;
+  margin: 0;
+  color: #fff;
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -.055em;
+}
+
+.recipe-reference-page .fried-egg-logo { width: 31px; height: 24px; }
+.recipe-reference-page .fried-egg-logo::before { top: 6px; left: 10px; width: 12px; height: 12px; }
+
+.recipe-reference-page .app-main {
+  height: calc(100dvh - 116px);
+  padding: 10px 16px calc(118px + env(safe-area-inset-bottom));
+  background: #fff;
+}
+
+.recipe-reference-page .screen > :not(.cuisine-tabs):not(.quick-filters) {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.recipe-reference-page .section { margin-bottom: 14px; }
+
+.recipe-reference-page .story-row { gap: 9px; padding: 2px 1px 6px; }
+.recipe-reference-page .story { min-height: 87px; }
+.recipe-reference-page .story-mark {
+  border: 1px solid #f1e5d2;
+  background: var(--recipe-orange-soft);
+  color: var(--recipe-orange-dark);
+}
+.recipe-reference-page .story span:last-child { color: #625e58; font-size: 10px; font-weight: 650; }
+
+.recipe-reference-page .hero-card {
+  border-color: var(--recipe-line);
+  background: linear-gradient(145deg, #fffaf1, #fff);
+  box-shadow: 0 6px 18px rgba(48,37,23,.055) !important;
+}
+.recipe-reference-page .hero-card .eyebrow { color: var(--recipe-orange-dark); }
+.recipe-reference-page .hero-card h2 { color: var(--recipe-ink); }
+.recipe-reference-page .hero-card p:not(.eyebrow) { color: var(--recipe-sub); }
+.recipe-reference-page .section-head { min-height: 42px; align-items: center; }
+.recipe-reference-page .section-head h2 { font-size: 18px; }
+.recipe-reference-page .segmented { margin: 4px 0 0; background: #f1eee9; }
+.recipe-reference-page .segmented button.active { background: #fff; color: var(--recipe-orange-dark); }
+
+.recipe-reference-page .feed { gap: 14px; }
+.recipe-reference-page .post {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--recipe-line);
+  border-radius: 18px;
+  background: #fff;
+}
+.recipe-reference-page .post-head { min-height: 58px; padding: 10px 12px; }
+.recipe-reference-page .post-head .avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  border-radius: 50%;
+  background: var(--recipe-orange-soft);
+  color: var(--recipe-orange-dark);
+}
+.recipe-reference-page .post-media {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  border-radius: 0;
+  background: #f6f0e7;
+}
+.recipe-reference-page .post-media img { border-radius: 0; }
+.recipe-reference-page .post-actions {
+  height: 46px;
+  margin: 0;
+  padding: 0 7px;
+  border-top: 0;
+}
+.recipe-reference-page .post-copy { padding: 0 13px 15px; }
+.recipe-reference-page .post-copy .likes { margin-bottom: 6px; color: var(--recipe-ink); font-size: 11px; }
+.recipe-reference-page .post-copy p:not(.likes) { display: block; font-size: 13px; line-height: 1.55; }
+.recipe-reference-page .post-copy button { display: block; }
+
+.recipe-reference-page .search-box { margin-top: 4px; background: #faf9f7; }
+.recipe-reference-page .recipe-grid,
+.recipe-reference-page .market-grid { gap: 12px; }
+.recipe-reference-page .recipe-card,
+.recipe-reference-page .product-card {
+  min-height: 0;
+  display: block;
+  padding: 0;
+  border: 1px solid var(--recipe-line);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(48,37,23,.05) !important;
+}
+.recipe-reference-page .recipe-thumb,
+.recipe-reference-page .product-thumb { width: 100%; height: auto; aspect-ratio: 1.25; border-radius: 0; }
+.recipe-reference-page .recipe-copy,
+.recipe-reference-page .product-copy { padding: 12px; }
+.recipe-reference-page .recipe-copy strong,
+.recipe-reference-page .product-copy strong { min-height: 39px; }
+
+.recipe-reference-page .profile-card { margin-top: 2px; }
+.recipe-reference-page .menu-row > span:first-child {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: var(--recipe-orange-dark);
+}
+.recipe-reference-page .menu-row:not(:last-child)::after { left: 14px; }
+
+.recipe-reference-page .bottom-nav {
+  height: calc(89px + env(safe-area-inset-bottom));
+  padding: 10px 8px calc(20px + env(safe-area-inset-bottom));
+}
+.recipe-reference-page .nav-button { min-height: 47px; color: #817d77; }
+.recipe-reference-page .nav-button.active { color: var(--recipe-orange-dark); }
+.recipe-reference-page .nav-button.create { transform: translateY(-15px); color: var(--recipe-orange-dark); }
+.recipe-reference-page .nav-button.create .nav-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--recipe-orange);
+  box-shadow: 0 4px 10px rgba(255,152,0,.22) !important;
+}
+
+@media (max-width: 360px) {
+  .recipe-reference-page .recipe-topbar { height: 108px; padding-right: 14px; padding-left: 14px; }
+  .recipe-reference-page .app-main { height: calc(100dvh - 108px); padding-right: 14px; padding-left: 14px; }
+  .recipe-reference-page .brand-wordmark { font-size: 25px; }
+}
+
+@media (min-width: 720px) {
+  .recipe-reference-page .app-main { height: calc(100dvh - 164px); }
 }

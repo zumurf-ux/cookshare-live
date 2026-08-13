@@ -36,25 +36,23 @@
   };
 
   const recipes = [
-    { id: "r1", title: "까망베르 후르츠 에그 토스트", author: "쿠킹 에디터", category: "간단요리", time: "15분", likes: 378, difficulty: "초보", image: "assets/recipe-egg-toast.jpg", tags: ["15분", "양식"], body: "노릇하게 구운 식빵에 달걀과 까망베르 치즈를 올린 든든한 브런치입니다." },
-    { id: "r2", title: "어니언 그라탱 수프", author: "오리온 키친", category: "양식", time: "35분", likes: 695, difficulty: "보통", image: "assets/recipe-onion-soup.jpg", tags: ["양파", "오븐"], body: "천천히 볶아 단맛을 끌어낸 양파와 치즈 토스트를 함께 즐기는 깊은 풍미의 수프입니다." },
-    { id: "r3", title: "바질 토마토 크림 파스타", author: "민지의 집밥", category: "메인요리", time: "25분", likes: 521, difficulty: "초보", image: "assets/recipe-tomato-pasta.jpg", tags: ["파스타", "25분"], body: "토마토의 산뜻함과 생크림의 부드러움을 바질 향으로 정리한 홈 레스토랑 메뉴입니다." },
-    { id: "r4", title: "제철 채소 리코타 샐러드", author: "그린테이블", category: "건강식", time: "10분", likes: 846, difficulty: "초보", image: "assets/recipe-ricotta-salad.jpg", tags: ["제철", "건강식"], body: "아삭한 제철 채소와 담백한 리코타 치즈에 레몬 드레싱을 곁들인 가벼운 한 끼입니다." },
-    { id: "r5", title: "베이크드 리코타 치즈버거", author: "발뮤다 키친", category: "메인요리", time: "30분", likes: 735, difficulty: "보통", image: "assets/recipe-cheese-burger.jpg", tags: ["오븐", "브런치"], body: "육즙 가득한 패티와 구운 리코타 치즈를 바삭한 번 사이에 담은 홈메이드 버거입니다." },
-    { id: "r6", title: "바나나 오트밀 쿠키", author: "윤서의 식탁", category: "간식", time: "20분", likes: 412, difficulty: "초보", image: "assets/recipe-oat-cookie.jpg", tags: ["노버터", "간식"], body: "잘 익은 바나나의 단맛과 오트밀의 고소함만으로 완성하는 건강한 홈베이킹입니다." },
-    { id: "r7", title: "잠봉 루콜라 샌드위치", author: "발뮤다 키친", category: "간단요리", time: "15분", likes: 337, difficulty: "초보", image: "assets/recipe-jambon-sandwich.jpg", tags: ["브런치", "15분"], body: "바삭하게 데운 바게트에 잠봉, 루콜라, 버터를 겹쳐 담은 프렌치 샌드위치입니다." },
-    { id: "r8", title: "새우 살사 소프트 타코", author: "미식당", category: "양식", time: "25분", likes: 289, difficulty: "보통", image: "assets/recipe-shrimp-taco.jpg", tags: ["새우", "홈파티"], body: "매콤하게 구운 새우와 산뜻한 토마토 살사를 또띠아에 담은 홈파티 메뉴입니다." }
+    { id: "r1", title: "들깨 두유 크림 파스타", author: "민지의 집밥", category: "면요리", time: "15분", likes: 128, icon: "leaf", image: "assets/recipe-tomato-pasta.jpg" },
+    { id: "r2", title: "제철 무 들기름 솥밥", author: "주말식탁", category: "밥요리", time: "35분", likes: 94, icon: "lunch", image: "assets/recipe-ricotta-salad.jpg" },
+    { id: "r3", title: "애호박 명란 덮밥", author: "도시락 연구소", category: "밥요리", time: "20분", likes: 1220, icon: "chef", image: "assets/recipe-shrimp-taco.jpg" },
+    { id: "r4", title: "매콤 두부 강정", author: "15분 요리", category: "반찬", time: "25분", likes: 986, icon: "fire", image: "assets/recipe-cheese-burger.jpg" },
+    { id: "r5", title: "봄동 된장국", author: "제철 한 끼", category: "국물", time: "30분", likes: 734, icon: "leaf", image: "assets/recipe-onion-soup.jpg" },
+    { id: "r6", title: "바나나 오트밀 쿠키", author: "민지의 집밥", category: "간식", time: "40분", likes: 612, icon: "clock", image: "assets/recipe-oat-cookie.jpg" }
   ];
 
   const products = [
-    { id: "p1", name: "강원도 제철 샐러드 채소 600g", price: 12900, category: "채소", detail: "새벽 수확 후 산지에서 바로 보내는 친환경 모둠 채소", image: "assets/recipe-ricotta-salad.jpg", icon: "leaf" },
-    { id: "p2", name: "자유방목 무항생제 유정란 20구", price: 10800, category: "신선", detail: "생산 이력을 확인할 수 있는 난각번호 1번 유정란", image: "assets/recipe-egg-toast.jpg", icon: "lunch" },
-    { id: "p3", name: "숙성 까망베르 치즈 200g", price: 18500, category: "유제품", detail: "브런치와 그라탱에 잘 어울리는 부드러운 숙성 치즈", image: "assets/recipe-onion-soup.jpg", icon: "point" },
-    { id: "p4", name: "국산 바질 토마토 소스 500g", price: 16900, category: "가공", detail: "완숙 토마토와 생바질을 천천히 끓여 만든 파스타 소스", image: "assets/recipe-tomato-pasta.jpg", icon: "shield" }
+    { id: "p1", name: "강원도 제철 쌈채소 600g", price: 12900, category: "채소", detail: "새벽 수확 후 산지에서 바로 보내는 친환경 모둠 쌈채소", icon: "leaf", image: "assets/recipe-ricotta-salad.jpg" },
+    { id: "p2", name: "자유방목 유정란 20구", price: 10800, category: "신선", detail: "생산 이력을 확인할 수 있는 난각번호 1번 유정란", icon: "lunch", image: "assets/recipe-egg-toast.jpg" },
+    { id: "p3", name: "국산콩 무첨가 두유 12팩", price: 18500, category: "가공", detail: "국산콩과 물만 사용한 담백한 무첨가 두유", icon: "point", image: "assets/recipe-oat-cookie.jpg" },
+    { id: "p4", name: "통영산 손질 굴 500g", price: 16900, category: "수산", detail: "세척과 손질을 마쳐 바로 요리에 사용할 수 있는 굴", icon: "shield", image: "assets/recipe-onion-soup.jpg" }
   ];
 
   const initialState = {
-    profile: { name: "윤서의 식탁", handle: "yoonseo_table", location: "서울 마포구", points: 12450 },
+    profile: { name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
     liked: {}, saved: {}, hidden: {}, joinedChallenge: false, cart: {}, orders: [], posts: [], drafts: [],
     comments: { r1: [{ id: "c1", author: "소소한밥상", body: "들깨가루 양을 조금 늘려도 맛있어요.", time: "오전 10:24" }] },
     notifications: [
@@ -82,17 +80,7 @@
   let state = loadState();
   let currentScreen = "home";
   let currentRecipeFilter = "전체";
-  let currentCuisine = "간단요리";
-  let currentQuickFilter = "추천순";
   let toastTimer;
-
-  const screenHeaders = {
-    home: ["오늘 뭐 먹지?", "윤서님을 위한<br>오늘의 메뉴 추천", "취향과 조리 시간을 반영한 맞춤 레시피"],
-    recipes: ["재료별 맞춤 탐색", "냉장고 재료로 찾는<br>오늘의 레시피", "보유 재료와 상황에 맞는 메뉴를 추천합니다"],
-    create: ["나만의 레시피 북", "오늘 만든 한 끼를<br>기록해 보세요", "사진과 조리 과정을 차곡차곡 보관합니다"],
-    market: ["레시피 연계 장보기", "필요한 재료를<br>한 번에 준비하세요", "검증된 산지 상품을 레시피와 함께 추천합니다"],
-    profile: ["나의 요리 데이터", "저장한 레시피와<br>식단을 관리하세요", "기록, 저장, 주문 내역을 한눈에 확인합니다"]
-  };
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -121,10 +109,6 @@
     document.body.scrollTop = 0;
     window.scrollTo({ top: 0, behavior: "auto" });
     requestAnimationFrame(() => window.scrollTo(0, 0));
-    const header = screenHeaders[screen] || screenHeaders.home;
-    $("[data-hero-kicker]").textContent = header[0];
-    $("[data-hero-title]").innerHTML = header[1];
-    $("[data-hero-subtitle]").textContent = header[2];
     if (screen === "recipes") renderRecipes();
     if (screen === "market") renderProducts();
     if (screen === "profile") renderCounts();
@@ -150,8 +134,8 @@
 
   function allPosts() {
     const base = [
-      { ...recipes[2], author: "민지의 집밥", handle: "@minji_table", title: "바질 향을 살린 토마토 크림 파스타", likes: 128 },
-      { ...recipes[3], author: "주말식탁", handle: "@weekend_table", title: "주말 브런치로 준비한 리코타 샐러드", likes: 94 }
+      { ...recipes[0], author: "민지의 집밥", handle: "@minji_table", title: "버터 없이도 고소한 들깨 두유 크림 파스타", body: "두유와 들깨가루로 완성한 15분 파스타입니다. 불을 약하게 줄인 뒤 소스를 섞으면 더 부드럽습니다.", likes: 128 },
+      { ...recipes[1], author: "주말식탁", handle: "@weekend_table", title: "무 하나로 끝내는 들기름 솥밥", body: "제철 무를 굵게 채 썰고 들기름을 둘러 은근하게 익혔어요. 양념장은 간장과 쪽파만 넣었습니다.", likes: 94 }
     ];
     return [...state.posts, ...base].filter(post => !state.hidden[post.id]);
   }
@@ -176,23 +160,6 @@
     return `<span>${icon("chef")} ${esc(recipe.difficulty || "초보")}</span><span>${icon("clock")} ${esc(recipe.time)}</span><span>${icon("heart")} ${Number(recipe.likes).toLocaleString("ko-KR")}</span>`;
   }
 
-  function featureCard(recipe, className = "feature-card") {
-    const saved = Boolean(state.saved[recipe.id]);
-    return `<article class="${className}"><button type="button" data-action="recipe-detail" data-id="${recipe.id}"><span class="recipe-photo"><img src="${esc(recipe.image)}" alt="${esc(recipe.title)}" loading="lazy"></span><span class="feature-copy"><strong>${esc(recipe.title)}</strong><span>${esc(recipe.body)}</span><span class="recipe-meta">${recipeMeta(recipe)}</span></span></button><button class="save-float ${saved ? "saved" : ""}" type="button" data-action="save" data-id="${recipe.id}" aria-label="${saved ? "저장 취소" : "레시피 저장"}">${icon("bookmark")}</button></article>`;
-  }
-
-  function renderReferenceCollections() {
-    const cuisineMatches = recipes.filter(recipe => recipe.category === currentCuisine || recipe.tags?.includes(currentCuisine));
-    const featured = cuisineMatches.length >= 2 ? [...cuisineMatches, ...recipes.filter(recipe => !cuisineMatches.includes(recipe))] : recipes;
-    const featuredRoot = $("[data-featured-recipes]");
-    if (featuredRoot) featuredRoot.innerHTML = featured.slice(0, 4).map(recipe => featureCard(recipe)).join("");
-    const ingredientRoot = $("[data-ingredient-recipes]");
-    if (ingredientRoot) ingredientRoot.innerHTML = [recipes[1], recipes[0], recipes[3]].map(recipe => featureCard(recipe, "ingredient-recipe-card")).join("");
-    const brandRoot = $("[data-brand-recipes]");
-    if (brandRoot) brandRoot.innerHTML = [recipes[5], recipes[2], recipes[7]].map((recipe, index) => `<button class="brand-item" type="button" data-action="recipe-detail" data-id="${recipe.id}"><img src="${esc(recipe.image)}" alt="" loading="lazy"><span class="brand-copy"><small>${["풀무원", "오리온", "미식당"][index]} 공식 레시피</small><strong>${esc(recipe.title)}</strong><span>${esc(recipe.time)} · 좋아요 ${recipe.likes.toLocaleString("ko-KR")}</span></span>${icon("chevron")}</button>`).join("");
-    const applianceRoot = $("[data-appliance-recipes]");
-    if (applianceRoot) applianceRoot.innerHTML = [recipes[0], recipes[6], recipes[4], recipes[5]].map(recipe => `<button class="appliance-card" type="button" data-action="recipe-detail" data-id="${recipe.id}"><img src="${esc(recipe.image)}" alt="${esc(recipe.title)}" loading="lazy"><span><strong>${esc(recipe.title)}</strong><span class="recipe-meta">${recipeMeta(recipe)}</span></span></button>`).join("");
-  }
 
   function renderRecipeCategories() {
     const categories = ["전체", ...new Set(recipes.map(recipe => recipe.category))];
@@ -278,7 +245,7 @@
     if (action === "story") return openSheet(button.dataset.name, `<article class="card hero-card"><p class="eyebrow">크리에이터 스토리</p><h2>${esc(button.dataset.name)}의 오늘 식탁</h2><p>제철 재료를 활용한 조리 과정과 장보기 팁을 확인해 보세요.</p></article>`);
     if (action === "challenge") { state.joinedChallenge = !state.joinedChallenge; saveState(); toast(state.joinedChallenge ? "챌린지에 참여했습니다." : "챌린지 참여를 취소했습니다."); button.textContent = state.joinedChallenge ? "참여 중" : "챌린지 참여"; return; }
     if (action === "like") { state.liked[id] ? delete state.liked[id] : state.liked[id] = true; saveState(); renderFeed(); return; }
-    if (action === "save") { state.saved[id] ? delete state.saved[id] : state.saved[id] = true; saveState(); renderFeed(); renderReferenceCollections(); toast(state.saved[id] ? "레시피를 저장했습니다." : "저장을 취소했습니다."); if ($("[data-sheet-root]").classList.contains("active")) closeSheet(); return; }
+    if (action === "save") { state.saved[id] ? delete state.saved[id] : state.saved[id] = true; saveState(); renderFeed(); toast(state.saved[id] ? "레시피를 저장했습니다." : "저장을 취소했습니다."); if ($("[data-sheet-root]").classList.contains("active")) closeSheet(); return; }
     if (action === "comments") return showComments(id);
     if (action === "recipe-detail") return showRecipe(id);
     if (action === "product-detail") return showProduct(id);
@@ -308,12 +275,6 @@
     if (closeButton) return closeSheet();
     const nav = event.target.closest("[data-nav]");
     if (nav) return navigate(nav.dataset.nav);
-    const cuisine = event.target.closest("[data-cuisine]");
-    if (cuisine) { currentCuisine = cuisine.dataset.cuisine; $$('[data-cuisine]').forEach(node => node.classList.toggle("active", node === cuisine)); renderReferenceCollections(); toast(`${currentCuisine} 추천을 불러왔습니다.`); return; }
-    const quickFilter = event.target.closest("[data-quick-filter]");
-    if (quickFilter) { currentQuickFilter = quickFilter.dataset.quickFilter; $$('[data-quick-filter]').forEach(node => node.classList.toggle("active", node === quickFilter)); toast(`${currentQuickFilter} 기준으로 추천합니다.`); return; }
-    const ingredient = event.target.closest("[data-ingredient]");
-    if (ingredient) { const ingredientMap = { "계란": "r1", "양파": "r2", "마늘": "r3", "대파": "r7", "상추": "r4" }; return showRecipe(ingredientMap[ingredient.dataset.ingredient] || "r1"); }
     const category = event.target.closest("[data-recipe-category]");
     if (category) { currentRecipeFilter = category.dataset.recipeCategory; renderRecipeCategories(); renderRecipes(); return; }
     const feedFilter = event.target.closest("[data-feed-filter]");
@@ -368,7 +329,7 @@
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
 
   function renderAll() {
-    hydrateIcons(); renderRecipeCategories(); renderRecipes(); renderProducts(); renderFeed(); renderReferenceCollections(); renderCounts();
+    hydrateIcons(); renderRecipeCategories(); renderRecipes(); renderProducts(); renderFeed(); renderCounts();
     const challengeButton = $('[data-action="challenge"]');
     if (challengeButton) challengeButton.textContent = state.joinedChallenge ? "참여 중" : "챌린지 참여";
   }
