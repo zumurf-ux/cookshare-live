@@ -1,10 +1,10 @@
-const CACHE_NAME = "cookshare-live-v11";
+const CACHE_NAME = "cookshare-live-v12";
 const appUrl = path => new URL(path, self.registration.scope).toString();
 const FALLBACK_URL = appUrl("cookshare-android-user-app.html");
 const APP_FILES = [
   FALLBACK_URL,
   appUrl("cookshare-ui.css?v=4"),
-  appUrl("cookshare-recipe-reference.css?v=7"),
+  appUrl("cookshare-recipe-reference.css?v=8"),
   appUrl("cookshare-user-app-live.js?v=5"),
   appUrl("cookshare-manifest.webmanifest"),
   appUrl("cookshare-app-icon.svg"),
@@ -15,7 +15,8 @@ const APP_FILES = [
   appUrl("assets/recipe-cheese-burger.jpg"),
   appUrl("assets/recipe-oat-cookie.jpg"),
   appUrl("assets/recipe-jambon-sandwich.jpg"),
-  appUrl("assets/recipe-shrimp-taco.jpg")
+  appUrl("assets/recipe-shrimp-taco.jpg"),
+  appUrl("assets/challenge-tofu-pexels-5848480.jpg")
 ];
 
 self.addEventListener("install", event => {
