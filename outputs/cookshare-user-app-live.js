@@ -63,6 +63,18 @@
     settings: { notifications: true, marketing: false, privateProfile: false }
   };
 
+  const challengeBannerRules = [
+    { keywords: ["두부", "콩"], image: "assets/challenge-tofu-pexels-5848480.jpg", position: "50% 38%" },
+    { keywords: ["파스타", "면", "국수"], image: "assets/recipe-tomato-pasta.jpg", position: "50% 52%" },
+    { keywords: ["밥", "덮밥", "솥밥", "볶음밥"], image: "assets/recipe-shrimp-taco.jpg", position: "50% 55%" },
+    { keywords: ["국", "수프", "찌개", "탕"], image: "assets/recipe-onion-soup.jpg", position: "50% 50%" },
+    { keywords: ["채소", "샐러드", "건강", "다이어트"], image: "assets/recipe-ricotta-salad.jpg", position: "50% 52%" },
+    { keywords: ["빵", "토스트", "브런치", "샌드위치"], image: "assets/recipe-egg-toast.jpg", position: "50% 48%" },
+    { keywords: ["쿠키", "디저트", "간식", "베이킹"], image: "assets/recipe-oat-cookie.jpg", position: "50% 55%" },
+    { keywords: ["새우", "타코", "해산물"], image: "assets/recipe-shrimp-taco.jpg", position: "50% 52%" },
+    { keywords: ["버거", "고기", "치즈"], image: "assets/recipe-cheese-burger.jpg", position: "50% 52%" }
+  ];
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const esc = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
@@ -81,6 +93,7 @@
   let currentScreen = "home";
   let currentRecipeFilter = "전체";
   let toastTimer;
+  let challengeBannerObserver;
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -90,6 +103,18 @@
 
   function hydrateIcons(root = document) {
     $$('[data-icon]', root).forEach(node => { if (!node.querySelector("svg")) node.innerHTML = icon(node.dataset.icon); });
+  }
+
+  function applyChallengeBannerImage() {
+    const banner = $("[data-challenge-banner]");
+    if (!banner) return;
+    const copy = [banner.querySelector(".eyebrow"), banner.querySelector("h2"), banner.querySelector("p:not(.eyebrow)")]
+      .map(node => node?.textContent || "")
+      .join(" ");
+    const rule = challengeBannerRules.find(item => item.keywords.some(keyword => copy.includes(keyword))) || challengeBannerRules[0];
+    const imageUrl = new URL(rule.image, document.baseURI).href;
+    banner.style.setProperty("--challenge-image", `url("${imageUrl}")`);
+    banner.style.setProperty("--challenge-position", rule.position);
   }
 
   function toast(message) {
@@ -329,11 +354,16 @@
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
 
   function renderAll() {
-    hydrateIcons(); renderRecipeCategories(); renderRecipes(); renderProducts(); renderFeed(); renderCounts();
+    hydrateIcons(); renderRecipeCategories(); renderRecipes(); renderProducts(); renderFeed(); renderCounts(); applyChallengeBannerImage();
     const challengeButton = $('[data-action="challenge"]');
     if (challengeButton) challengeButton.textContent = state.joinedChallenge ? "참여 중" : "챌린지 참여";
   }
 
   renderAll();
+  const challengeBanner = $("[data-challenge-banner]");
+  if (challengeBanner) {
+    challengeBannerObserver = new MutationObserver(applyChallengeBannerImage);
+    challengeBannerObserver.observe(challengeBanner, { childList: true, characterData: true, subtree: true });
+  }
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("cookshare-service-worker.js").catch(() => {});
 })();
