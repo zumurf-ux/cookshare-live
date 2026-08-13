@@ -1372,7 +1372,7 @@ body.recipe-reference-page {
   min-height: 300px;
   margin-top: 2px;
   padding: 27px;
-  border: 6px solid #fff;
+  border: 0;
   border-radius: 28px;
   box-shadow: 0 14px 30px rgba(89,42,19,.17) !important;
 }
