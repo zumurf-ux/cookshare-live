@@ -99,6 +99,7 @@
     { id: "u2", name: "민지의 집밥", handle: "minji_table", location: "경기 성남시", status: "정상" },
     { id: "u3", name: "주말식탁", handle: "weekend_table", location: "서울 송파구", status: "정상" }
   ];
+  const testAccount = { id: "account-public-test", provider: "local", name: "테스트 사용자", handle: "testuser", phone: "01000000000", pinHash: "4975f76af3a50e0a89802470cf95280dd19a1f29ad91a8b867a654093d7d229d", needsPin: false, location: "서울 마포구", createdAt: "2026-08-15T00:00:00.000Z", isTest: true };
 
   function normalizeState(saved) {
     if (!saved) return structuredClone(initialState);
@@ -148,6 +149,10 @@
 
   const hadLegacyState = localStorage.getItem(STORAGE_KEY) !== null;
   let accounts = loadAccounts();
+  const testAccountIndex = accounts.findIndex(account => account.id === testAccount.id);
+  if (testAccountIndex >= 0) accounts[testAccountIndex] = { ...accounts[testAccountIndex], ...testAccount };
+  else accounts.push({ ...testAccount });
+  saveAccounts();
   let state = loadState();
   let adminState = loadAdminState();
   let currentScreen = "home";
@@ -286,11 +291,12 @@
       button.setAttribute("aria-selected", String(active));
       if (button.dataset.authMode === "signup") button.disabled = !signupAllowed;
     });
-    $("[data-auth-body]").innerHTML = mode === "signup" ? `<form class="auth-form" data-signup-form><div class="field"><label for="signup-name">닉네임</label><input id="signup-name" name="name" maxlength="20" required autocomplete="name" placeholder="오늘한입에서 사용할 이름"></div><div class="field"><label for="signup-handle">사용자 ID</label><input id="signup-handle" name="handle" minlength="3" maxlength="24" required pattern="[a-z0-9_]+" autocapitalize="none" autocomplete="username" placeholder="영문 소문자, 숫자, 밑줄"></div><div class="field"><label for="signup-phone">휴대폰 번호</label><input id="signup-phone" name="phone" type="tel" inputmode="numeric" required autocomplete="tel" placeholder="01012345678"></div><div class="field"><label for="signup-pin">로그인 PIN</label><input id="signup-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><label class="auth-check"><input name="terms" type="checkbox" required>서비스 이용약관과 개인정보 처리 안내에 동의합니다.</label><button class="primary-button full-button" type="submit">간편 회원가입</button></form><p class="auth-help">가입 후 이 기기에서는 로그인 상태가 유지됩니다.</p>` : `<form class="auth-form" data-login-form><div class="field"><label for="login-id">사용자 ID 또는 휴대폰</label><input id="login-id" name="identifier" required autocomplete="username" placeholder="사용자 ID 또는 휴대폰 번호"></div><div class="field"><label for="login-pin">로그인 PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password" placeholder="숫자 4자리"></div><button class="primary-button full-button" type="submit">로그인</button></form><p class="auth-help">PIN을 잊었다면 운영자에게 계정 확인을 요청해 주세요.</p>`;
+    $("[data-auth-body]").innerHTML = mode === "signup" ? `<form class="auth-form" data-signup-form><div class="field"><label for="signup-name">닉네임</label><input id="signup-name" name="name" maxlength="20" required autocomplete="name" placeholder="오늘한입에서 사용할 이름"></div><div class="field"><label for="signup-handle">사용자 ID</label><input id="signup-handle" name="handle" minlength="3" maxlength="24" required pattern="[a-z0-9_]+" autocapitalize="none" autocomplete="username" placeholder="영문 소문자, 숫자, 밑줄"></div><div class="field"><label for="signup-phone">휴대폰 번호</label><input id="signup-phone" name="phone" type="tel" inputmode="numeric" required autocomplete="tel" placeholder="01012345678"></div><div class="field"><label for="signup-pin">로그인 PIN</label><input id="signup-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><label class="auth-check"><input name="terms" type="checkbox" required>서비스 이용약관과 개인정보 처리 안내에 동의합니다.</label><button class="primary-button full-button" type="submit">간편 회원가입</button></form><p class="auth-help">가입 후 이 기기에서는 로그인 상태가 유지됩니다.</p>` : `<form class="auth-form" data-login-form><div class="field"><label for="login-id">사용자 ID 또는 휴대폰</label><input id="login-id" name="identifier" required autocomplete="username" placeholder="사용자 ID 또는 휴대폰 번호"></div><div class="field"><label for="login-pin">비밀번호(PIN 4자리)</label><input id="login-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password" placeholder="숫자 4자리"></div><button class="primary-button full-button" type="submit">로그인</button></form><p class="auth-help">비밀번호를 잊었다면 운영자에게 계정 확인을 요청해 주세요.</p>`;
     const authBody = $("[data-auth-body]");
     const localAuthMarkup = authBody.innerHTML;
     const intro = mode === "signup" ? `<div class="auth-intro"><strong>간편하게 시작하세요</strong><p>카카오 또는 네이버 계정으로 별도 비밀번호 없이 가입합니다.</p></div>` : `<div class="auth-intro"><strong>간편 로그인</strong><p>가입할 때 사용한 계정으로 안전하게 로그인하세요.</p></div>`;
     authBody.innerHTML = `${intro}<div class="social-auth"><button class="social-button kakao" type="button" data-social-auth="kakao"><span class="social-mark" aria-hidden="true">K</span><strong>카카오로 시작하기</strong></button><button class="social-button naver" type="button" data-social-auth="naver"><span class="social-mark" aria-hidden="true">N</span><strong>네이버로 시작하기</strong></button></div><p class="social-terms">계속하면 오늘한입 이용약관과 개인정보 처리 안내에 동의한 것으로 봅니다.</p><div class="auth-divider"><span>또는</span></div><details class="local-auth"><summary>${mode === "signup" ? "ID로 직접 가입" : "기존 ID로 로그인"}</summary><div class="local-auth-body">${localAuthMarkup}</div></details>`;
+    authBody.insertAdjacentHTML("beforeend", `<section class="test-account" aria-label="공개 테스트 계정"><span><strong>테스트 계정</strong><small>ID testuser · 비밀번호 1234</small></span><button class="small-button" type="button" data-fill-test-login>자동 입력</button></section>`);
     const sessionAccount = currentAccount();
     if (sessionAccount) authBody.insertAdjacentHTML("afterbegin", `<section class="session-resume" aria-label="현재 로그인 계정"><span class="session-resume-avatar" aria-hidden="true">${esc(sessionAccount.name.slice(0, 1))}</span><span><small>로그인된 계정</small><strong>${esc(sessionAccount.name)}</strong><em>@${esc(sessionAccount.handle)}</em></span><button class="primary-button" type="button" data-auth-resume>계속하기</button></section>`);
     setAuthStatus(!signupAllowed ? "현재 신규 회원가입이 일시 중지되었습니다." : "");
@@ -317,7 +323,8 @@
 
   function initializeAuth() {
     let account = currentAccount();
-    if (!account && !accounts.length && hadLegacyState) {
+    const memberAccounts = accounts.filter(item => !item.isTest);
+    if (!account && !memberAccounts.length && hadLegacyState) {
       account = { id: uid("account"), name: state.profile.name, handle: state.profile.handle, phone: "", pinHash: "", needsPin: true, location: state.profile.location, createdAt: new Date().toISOString() };
       accounts.push(account);
       saveAccounts();
@@ -335,7 +342,7 @@
       hideAuth();
       return;
     }
-    renderAuth(accounts.length ? "login" : "signup");
+    renderAuth(memberAccounts.length ? "login" : "signup");
   }
 
   function addPointHistory(type, amount, reason) {
@@ -489,7 +496,7 @@
     $$('[data-account-phone]').forEach(node => node.textContent = account?.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록");
     $$('[data-account-status]').forEach(node => { node.textContent = account?.needsPin ? "PIN 설정 필요" : account ? "로그인 중" : "로그아웃"; node.dataset.state = account?.needsPin ? "warning" : account ? "active" : "inactive"; });
     const providerName = socialProviderNames[account?.provider];
-    $$('[data-account-method]').forEach(node => node.textContent = providerName ? `${providerName} 간편 로그인` : "사용자 ID 또는 휴대폰 + PIN");
+    $$('[data-account-method]').forEach(node => node.textContent = providerName ? `${providerName} 간편 로그인` : "사용자 ID + 4자리 비밀번호");
     $$('[data-account-security-label]').forEach(node => node.textContent = providerName ? `${providerName} 연결 확인` : account?.needsPin ? "PIN 설정" : "PIN 변경");
   }
 
@@ -580,7 +587,7 @@
     const phone = account.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록";
     const joined = account.createdAt ? new Date(account.createdAt).toLocaleDateString("ko-KR") : "기존 회원";
     const providerName = socialProviderNames[account.provider];
-    const loginMethod = providerName ? `${providerName} 간편 로그인` : "ID 또는 휴대폰 + PIN";
+    const loginMethod = providerName ? `${providerName} 간편 로그인` : "사용자 ID + 4자리 비밀번호";
     const securityLabel = providerName ? `${providerName} 계정 다시 인증` : account.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경";
     openSheet("계정 및 로그인", `<article class="account-sheet-summary"><p>현재 로그인 계정</p><h2>@${esc(account.handle)}</h2><dl><div><dt>닉네임</dt><dd>${esc(account.name)}</dd></div><div><dt>휴대폰</dt><dd>${esc(phone)}</dd></div><div><dt>로그인 방식</dt><dd>${esc(loginMethod)}</dd></div><div><dt>가입일</dt><dd>${esc(joined)}</dd></div></dl></article><div class="account-sheet-actions"><button class="primary-button full-button" type="button" data-action="account-security">${esc(securityLabel)}</button><button class="secondary-button full-button" type="button" data-action="logout">로그아웃</button></div>`);
   }
@@ -640,6 +647,8 @@
   }
 
   document.addEventListener("click", event => {
+    const fillTestButton = event.target.closest("[data-fill-test-login]");
+    if (fillTestButton) { if (currentAuthMode !== "login") renderAuth("login"); const details = $(".local-auth"); if (details) details.open = true; $("#login-id").value = "testuser"; $("#login-pin").value = "1234"; $("[data-login-form] button[type='submit']")?.focus(); return; }
     const resumeButton = event.target.closest("[data-auth-resume]");
     if (resumeButton) { localStorage.setItem(AUTH_ENTRY_KEY, AUTH_ENTRY_VERSION); hideAuth(); renderAll(); navigate("home"); toast("로그인 상태로 계속합니다."); return; }
     const socialButton = event.target.closest("[data-social-auth]");

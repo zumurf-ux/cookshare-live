@@ -19,6 +19,8 @@ GitHub Pages 배포 후 저장소 기본 주소에서 사용자 앱과 운영자
 - 사용자 앱: `https://zumurf-ux.github.io/cookshare-live/outputs/cookshare-android-user-app.html`
 - 운영자 콘솔: `https://zumurf-ux.github.io/cookshare-live/outputs/cookshare-operator-admin-web.html`
 
+공개 테스트 계정은 사용자 ID `testuser`, 비밀번호 `1234`입니다. 로그인 화면의 `자동 입력` 버튼으로도 입력할 수 있습니다.
+
 사용자 앱과 운영자 콘솔은 같은 출처의 브라우저 저장소를 사용하므로 게시물, 주문, 포인트, 신고 상태가 서로 반영됩니다.
 
 ## 구현 기능
