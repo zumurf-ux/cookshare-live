@@ -1816,6 +1816,22 @@ body.recipe-reference-page {
 .recipe-reference-page .auth-intro { margin-bottom: 20px; }
 .recipe-reference-page .auth-intro strong { display: block; margin-bottom: 6px; color: #202824; font-size: 19px; letter-spacing: -.03em; }
 .recipe-reference-page .auth-intro p { margin: 0; color: #6e7672; font-size: 13px; line-height: 1.55; }
+.recipe-reference-page .social-auth { display: grid; gap: 10px; }
+.recipe-reference-page .social-button { position: relative; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 18px; border: 0; border-radius: 10px; font-size: 15px; box-shadow: none; }
+.recipe-reference-page .social-button.kakao { background: #fee500; color: #191919; }
+.recipe-reference-page .social-button.naver { background: #03c75a; color: #fff; }
+.recipe-reference-page .social-button:hover { filter: brightness(.97); }
+.recipe-reference-page .social-button:focus-visible { outline: 3px solid rgba(31, 63, 48, .26); outline-offset: 3px; }
+.recipe-reference-page .social-mark { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.4); font-size: 13px; font-weight: 900; }
+.recipe-reference-page .social-terms { margin: 13px 4px 0; color: #7a817d; font-size: 10px; line-height: 1.55; text-align: center; }
+.recipe-reference-page .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 14px; color: #929894; font-size: 10px; }
+.recipe-reference-page .auth-divider::before,
+.recipe-reference-page .auth-divider::after { content: ""; height: 1px; flex: 1; background: #dfe2df; }
+.recipe-reference-page .local-auth { border: 1px solid #dfe2df; border-radius: 10px; background: #fff; }
+.recipe-reference-page .local-auth summary { min-height: 46px; display: grid; place-items: center; padding: 0 14px; color: #5f6763; font-size: 12px; font-weight: 750; cursor: pointer; list-style: none; }
+.recipe-reference-page .local-auth summary::-webkit-details-marker { display: none; }
+.recipe-reference-page .local-auth[open] summary { border-bottom: 1px solid #e6e8e6; }
+.recipe-reference-page .local-auth-body { padding: 16px; }
 .recipe-reference-page [data-screen="profile"] > .account-card { min-height: 0; padding: 20px; border: 1px solid #dedfdc; border-radius: 18px; background: #fff; box-shadow: none !important; }
 .recipe-reference-page .account-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .recipe-reference-page .account-kicker { margin: 0 0 5px; color: #767b78; font-size: 12px; font-weight: 700; }

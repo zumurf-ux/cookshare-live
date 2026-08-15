@@ -141,7 +141,7 @@
   function accountStateKey(id) { return `${ACCOUNT_STATE_PREFIX}${id}`; }
   function currentAccount() { const id = localStorage.getItem(SESSION_KEY); return accounts.find(account => account.id === id) || null; }
   function normalizeHandle(value) { return String(value || "").trim().replace(/^@/, "").toLowerCase(); }
-  function normalizePhone(value) { return String(value || "").replace(/\D/g, ""); }
+  function normalizePhone(value) { const digits = String(value || "").replace(/\D/g, ""); return digits.startsWith("82") ? `0${digits.slice(2)}` : digits; }
   async function hashPin(value) { const bytes = new TextEncoder().encode(`today-one-bite:${value}`); const digest = await crypto.subtle.digest("SHA-256", bytes); return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join(""); }
 
   const hadLegacyState = localStorage.getItem(STORAGE_KEY) !== null;
@@ -155,6 +155,95 @@
   let currentAuthMode = "login";
   let toastTimer;
   let challengeBannerObserver;
+  const socialProviderNames = { kakao: "카카오", naver: "네이버" };
+
+  function authApiBase() {
+    return String(window.COOKSHARE_AUTH_CONFIG?.apiBase || "").replace(/\/$/, "");
+  }
+
+  function cleanSocialParams() {
+    const url = new URL(location.href);
+    ["social_ticket", "social_provider", "social_error"].forEach(key => url.searchParams.delete(key));
+    history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  async function startSocialAuth(provider) {
+    const providerName = socialProviderNames[provider];
+    const apiBase = authApiBase();
+    if (!providerName) return;
+    if (!apiBase) return setAuthStatus(`${providerName} 로그인을 사용하려면 운영 서버의 OAuth 연동 설정이 필요합니다.`);
+    try {
+      const response = await fetch(`${apiBase}/api/auth/config`, { headers: { Accept: "application/json" } });
+      const config = response.ok ? await response.json() : null;
+      if (!config?.providers?.[provider]) return setAuthStatus(`${providerName} 개발자 앱 키가 아직 설정되지 않았습니다.`);
+      const returnUrl = new URL(location.href);
+      ["social_ticket", "social_provider", "social_error"].forEach(key => returnUrl.searchParams.delete(key));
+      location.assign(`${apiBase}/api/auth/${provider}/start?returnTo=${encodeURIComponent(returnUrl.toString())}`);
+    } catch {
+      setAuthStatus("간편 로그인 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+    }
+  }
+
+  function uniqueSocialHandle(provider, providerId) {
+    const stem = `${provider}_${String(providerId).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(-12) || Math.random().toString(36).slice(2, 10)}`;
+    let handle = stem.slice(0, 24);
+    let index = 1;
+    while (accounts.some(account => account.handle === handle)) handle = `${stem.slice(0, 20)}_${index++}`;
+    return handle;
+  }
+
+  async function consumeSocialCallback() {
+    const params = new URLSearchParams(location.search);
+    const socialError = params.get("social_error");
+    const ticket = params.get("social_ticket");
+    if (!socialError && !ticket) return false;
+    if (socialError) {
+      cleanSocialParams();
+      renderAuth("login");
+      setAuthStatus(socialError);
+      return true;
+    }
+    const apiBase = authApiBase();
+    if (!apiBase) {
+      cleanSocialParams();
+      renderAuth("login");
+      setAuthStatus("간편 로그인 서버 설정을 확인해 주세요.");
+      return true;
+    }
+    try {
+      const response = await fetch(`${apiBase}/api/auth/exchange?ticket=${encodeURIComponent(ticket)}`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("exchange_failed");
+      const profile = await response.json();
+      let account = accounts.find(item => item.provider === profile.provider && item.providerId === String(profile.id));
+      const isNew = !account;
+      if (isNew && !adminState.settings.registration) throw new Error("registration_closed");
+      if (!account) {
+        account = { id: uid(`account-${profile.provider}`), provider: profile.provider, providerId: String(profile.id), name: profile.name || `${socialProviderNames[profile.provider]} 회원`, handle: uniqueSocialHandle(profile.provider, profile.id), phone: normalizePhone(profile.phone), email: profile.email || "", avatar: profile.avatar || "", pinHash: "", needsPin: false, location: "지역 미설정", createdAt: new Date().toISOString() };
+        accounts.push(account);
+      } else {
+        account.name = profile.name || account.name;
+        account.phone = normalizePhone(profile.phone) || account.phone;
+        account.email = profile.email || account.email;
+        account.avatar = profile.avatar || account.avatar;
+      }
+      saveAccounts();
+      let nextState = localStorage.getItem(accountStateKey(account.id)) ? loadState(accountStateKey(account.id)) : structuredClone(initialState);
+      if (isNew) {
+        nextState.profile = { ...nextState.profile, accountId: account.id, name: account.name, handle: account.handle, location: account.location, points: 500 };
+        nextState.pointHistory = [{ id: uid("PT"), type: "적립", amount: 500, reason: `${socialProviderNames[profile.provider]} 간편가입 웰컴 포인트`, date: new Date().toLocaleString("ko-KR") }];
+        nextState.notifications = [{ id: uid("notification"), title: "오늘한입 가입 완료", body: `${socialProviderNames[profile.provider]} 계정으로 간편가입이 완료되었습니다.`, read: false }];
+      }
+      cleanSocialParams();
+      activateAccount(account, nextState);
+      toast(isNew ? `${socialProviderNames[profile.provider]} 간편가입이 완료되었습니다.` : `${socialProviderNames[profile.provider]} 계정으로 로그인했습니다.`);
+      return true;
+    } catch (error) {
+      cleanSocialParams();
+      renderAuth("login");
+      setAuthStatus(error.message === "registration_closed" ? "현재 신규 회원가입이 일시 중지되었습니다." : "간편 로그인 확인에 실패했습니다. 다시 시도해 주세요.");
+      return true;
+    }
+  }
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -196,7 +285,10 @@
       if (button.dataset.authMode === "signup") button.disabled = !signupAllowed;
     });
     $("[data-auth-body]").innerHTML = mode === "signup" ? `<form class="auth-form" data-signup-form><div class="field"><label for="signup-name">닉네임</label><input id="signup-name" name="name" maxlength="20" required autocomplete="name" placeholder="오늘한입에서 사용할 이름"></div><div class="field"><label for="signup-handle">사용자 ID</label><input id="signup-handle" name="handle" minlength="3" maxlength="24" required pattern="[a-z0-9_]+" autocapitalize="none" autocomplete="username" placeholder="영문 소문자, 숫자, 밑줄"></div><div class="field"><label for="signup-phone">휴대폰 번호</label><input id="signup-phone" name="phone" type="tel" inputmode="numeric" required autocomplete="tel" placeholder="01012345678"></div><div class="field"><label for="signup-pin">로그인 PIN</label><input id="signup-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><label class="auth-check"><input name="terms" type="checkbox" required>서비스 이용약관과 개인정보 처리 안내에 동의합니다.</label><button class="primary-button full-button" type="submit">간편 회원가입</button></form><p class="auth-help">가입 후 이 기기에서는 로그인 상태가 유지됩니다.</p>` : `<form class="auth-form" data-login-form><div class="field"><label for="login-id">사용자 ID 또는 휴대폰</label><input id="login-id" name="identifier" required autocomplete="username" placeholder="사용자 ID 또는 휴대폰 번호"></div><div class="field"><label for="login-pin">로그인 PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password" placeholder="숫자 4자리"></div><button class="primary-button full-button" type="submit">로그인</button></form><p class="auth-help">PIN을 잊었다면 운영자에게 계정 확인을 요청해 주세요.</p>`;
-    $("[data-auth-body]").insertAdjacentHTML("afterbegin", mode === "signup" ? `<div class="auth-intro"><strong>간편하게 시작하세요</strong><p>게시물, 저장 목록과 주문 내역을 내 계정에 보관합니다.</p></div>` : `<div class="auth-intro"><strong>로그인 후 이용해 주세요</strong><p>사용자 ID 또는 휴대폰 번호와 4자리 PIN을 입력하세요.</p></div>`);
+    const authBody = $("[data-auth-body]");
+    const localAuthMarkup = authBody.innerHTML;
+    const intro = mode === "signup" ? `<div class="auth-intro"><strong>간편하게 시작하세요</strong><p>카카오 또는 네이버 계정으로 별도 비밀번호 없이 가입합니다.</p></div>` : `<div class="auth-intro"><strong>간편 로그인</strong><p>가입할 때 사용한 계정으로 안전하게 로그인하세요.</p></div>`;
+    authBody.innerHTML = `${intro}<div class="social-auth"><button class="social-button kakao" type="button" data-social-auth="kakao"><span class="social-mark" aria-hidden="true">K</span><strong>카카오로 시작하기</strong></button><button class="social-button naver" type="button" data-social-auth="naver"><span class="social-mark" aria-hidden="true">N</span><strong>네이버로 시작하기</strong></button></div><p class="social-terms">계속하면 오늘한입 이용약관과 개인정보 처리 안내에 동의한 것으로 봅니다.</p><div class="auth-divider"><span>또는</span></div><details class="local-auth"><summary>${mode === "signup" ? "ID로 직접 가입" : "기존 ID로 로그인"}</summary><div class="local-auth-body">${localAuthMarkup}</div></details>`;
     setAuthStatus(!signupAllowed ? "현재 신규 회원가입이 일시 중지되었습니다." : "");
     $("[data-auth-body] input")?.focus();
   }
@@ -390,7 +482,9 @@
     $$('[data-account-handle]').forEach(node => node.textContent = account ? `@${account.handle}` : "로그인이 필요합니다");
     $$('[data-account-phone]').forEach(node => node.textContent = account?.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록");
     $$('[data-account-status]').forEach(node => { node.textContent = account?.needsPin ? "PIN 설정 필요" : account ? "로그인 중" : "로그아웃"; node.dataset.state = account?.needsPin ? "warning" : account ? "active" : "inactive"; });
-    $$('[data-account-pin-action]').forEach(node => node.textContent = account?.needsPin ? "PIN 설정" : "PIN 변경");
+    const providerName = socialProviderNames[account?.provider];
+    $$('[data-account-method]').forEach(node => node.textContent = providerName ? `${providerName} 간편 로그인` : "사용자 ID 또는 휴대폰 + PIN");
+    $$('[data-account-security-label]').forEach(node => node.textContent = providerName ? `${providerName} 연결 확인` : account?.needsPin ? "PIN 설정" : "PIN 변경");
   }
 
   function recipeById(id) {
@@ -468,7 +562,10 @@
   function showSettings() {
     const switchButton = (key, label, description) => `<button class="menu-row" type="button" data-action="toggle-setting" data-key="${key}"><span>${icon(state.settings[key] ? "check" : "close")}</span><span class="sheet-row-copy"><strong>${label}</strong><small>${description}</small></span><small>${state.settings[key] ? "켬" : "끔"}</small></button>`;
     const account = currentAccount();
-    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="change-pin"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${account?.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경"}</strong><small>숫자 4자리 PIN으로 계정을 보호합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="logout"><span>${icon("user")}</span><span class="sheet-row-copy"><strong>로그아웃</strong><small>@${esc(state.profile.handle)} 계정에서 로그아웃합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
+    const providerName = socialProviderNames[account?.provider];
+    const securityLabel = providerName ? `${providerName} 계정 연결` : account?.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경";
+    const securityDescription = providerName ? `${providerName} 계정으로 다시 인증합니다.` : "숫자 4자리 PIN으로 계정을 보호합니다.";
+    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="account-security"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${esc(securityLabel)}</strong><small>${esc(securityDescription)}</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="logout"><span>${icon("user")}</span><span class="sheet-row-copy"><strong>로그아웃</strong><small>@${esc(state.profile.handle)} 계정에서 로그아웃합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
   }
 
   function showAccountInfo() {
@@ -476,7 +573,10 @@
     if (!account) return renderAuth("login");
     const phone = account.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록";
     const joined = account.createdAt ? new Date(account.createdAt).toLocaleDateString("ko-KR") : "기존 회원";
-    openSheet("계정 및 로그인", `<article class="account-sheet-summary"><p>현재 로그인 계정</p><h2>@${esc(account.handle)}</h2><dl><div><dt>닉네임</dt><dd>${esc(account.name)}</dd></div><div><dt>휴대폰</dt><dd>${esc(phone)}</dd></div><div><dt>가입일</dt><dd>${esc(joined)}</dd></div></dl></article><div class="account-sheet-actions"><button class="primary-button full-button" type="button" data-action="change-pin">${account.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경"}</button><button class="secondary-button full-button" type="button" data-action="logout">로그아웃</button></div>`);
+    const providerName = socialProviderNames[account.provider];
+    const loginMethod = providerName ? `${providerName} 간편 로그인` : "ID 또는 휴대폰 + PIN";
+    const securityLabel = providerName ? `${providerName} 계정 다시 인증` : account.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경";
+    openSheet("계정 및 로그인", `<article class="account-sheet-summary"><p>현재 로그인 계정</p><h2>@${esc(account.handle)}</h2><dl><div><dt>닉네임</dt><dd>${esc(account.name)}</dd></div><div><dt>휴대폰</dt><dd>${esc(phone)}</dd></div><div><dt>로그인 방식</dt><dd>${esc(loginMethod)}</dd></div><div><dt>가입일</dt><dd>${esc(joined)}</dd></div></dl></article><div class="account-sheet-actions"><button class="primary-button full-button" type="button" data-action="account-security">${esc(securityLabel)}</button><button class="secondary-button full-button" type="button" data-action="logout">로그아웃</button></div>`);
   }
 
   function showProfileForm() {
@@ -513,6 +613,7 @@
     if (action === "cancel-order") { const order = state.orders.find(item => item.id === id); if (!order) return; if (!confirm("이 주문을 취소할까요?")) return; order.status = "주문 취소"; saveState(); toast("주문을 취소했습니다."); return showOrder(id); }
     if (action === "settings") return showSettings();
     if (action === "account-info") return showAccountInfo();
+    if (action === "account-security") { const account = currentAccount(); return account?.provider ? startSocialAuth(account.provider) : showPinForm(); }
     if (action === "change-pin") return showPinForm();
     if (action === "logout") { const account = currentAccount(); if (account?.needsPin) { toast("로그아웃 전에 로그인 PIN을 설정해 주세요."); return showPinForm(); } saveState(); localStorage.removeItem(SESSION_KEY); closeSheet(); renderAuth("login"); setAuthStatus("안전하게 로그아웃되었습니다."); return; }
     if (action === "edit-profile") return showProfileForm();
@@ -533,6 +634,8 @@
   }
 
   document.addEventListener("click", event => {
+    const socialButton = event.target.closest("[data-social-auth]");
+    if (socialButton) return startSocialAuth(socialButton.dataset.socialAuth);
     const authMode = event.target.closest("[data-auth-mode]");
     if (authMode) return renderAuth(authMode.dataset.authMode);
     const closeButton = event.target.closest("[data-close-sheet]");
@@ -686,8 +789,10 @@
     if (adminState.settings.maintenance && currentScreen !== "profile") navigate("profile");
   }
 
-  initializeAuth();
-  renderAll();
+  consumeSocialCallback().then(handled => {
+    if (!handled) initializeAuth();
+    renderAll();
+  });
   const challengeBanner = $("[data-challenge-banner]");
   if (challengeBanner) {
     challengeBannerObserver = new MutationObserver(applyChallengeBannerImage);
