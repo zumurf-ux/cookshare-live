@@ -1816,6 +1816,16 @@ body.recipe-reference-page {
 .recipe-reference-page .auth-intro { margin-bottom: 20px; }
 .recipe-reference-page .auth-intro strong { display: block; margin-bottom: 6px; color: #202824; font-size: 19px; letter-spacing: -.03em; }
 .recipe-reference-page .auth-intro p { margin: 0; color: #6e7672; font-size: 13px; line-height: 1.55; }
+.recipe-reference-page .session-resume { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; align-items: center; gap: 11px; margin-bottom: 20px; padding: 12px; border: 1px solid #d9dedb; border-radius: 12px; background: #fff; }
+.recipe-reference-page .session-resume-avatar { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: #edf1ee; color: #34423b; font-size: 14px; font-weight: 850; }
+.recipe-reference-page .session-resume > span:nth-child(2) { min-width: 0; }
+.recipe-reference-page .session-resume small,
+.recipe-reference-page .session-resume strong,
+.recipe-reference-page .session-resume em { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recipe-reference-page .session-resume small { color: #7e8581; font-size: 10px; }
+.recipe-reference-page .session-resume strong { margin-top: 2px; color: #222925; font-size: 13px; }
+.recipe-reference-page .session-resume em { margin-top: 1px; color: #737a76; font-size: 10px; font-style: normal; }
+.recipe-reference-page .session-resume .primary-button { min-height: 38px; padding: 0 13px; font-size: 11px; }
 .recipe-reference-page .social-auth { display: grid; gap: 10px; }
 .recipe-reference-page .social-button { position: relative; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 18px; border: 0; border-radius: 10px; font-size: 15px; box-shadow: none; }
 .recipe-reference-page .social-button.kakao { background: #fee500; color: #191919; }

@@ -6,6 +6,8 @@
   const REPORT_KEY = "cookshare.reports.v1";
   const ACCOUNTS_KEY = "cookshare.accounts.v1";
   const SESSION_KEY = "cookshare.session.v1";
+  const AUTH_ENTRY_KEY = "cookshare.auth.entry.v1";
+  const AUTH_ENTRY_VERSION = "social-login-v1";
   const ACCOUNT_STATE_PREFIX = "cookshare.live.account.v1.";
   const iconPaths = {
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
@@ -289,6 +291,8 @@
     const localAuthMarkup = authBody.innerHTML;
     const intro = mode === "signup" ? `<div class="auth-intro"><strong>간편하게 시작하세요</strong><p>카카오 또는 네이버 계정으로 별도 비밀번호 없이 가입합니다.</p></div>` : `<div class="auth-intro"><strong>간편 로그인</strong><p>가입할 때 사용한 계정으로 안전하게 로그인하세요.</p></div>`;
     authBody.innerHTML = `${intro}<div class="social-auth"><button class="social-button kakao" type="button" data-social-auth="kakao"><span class="social-mark" aria-hidden="true">K</span><strong>카카오로 시작하기</strong></button><button class="social-button naver" type="button" data-social-auth="naver"><span class="social-mark" aria-hidden="true">N</span><strong>네이버로 시작하기</strong></button></div><p class="social-terms">계속하면 오늘한입 이용약관과 개인정보 처리 안내에 동의한 것으로 봅니다.</p><div class="auth-divider"><span>또는</span></div><details class="local-auth"><summary>${mode === "signup" ? "ID로 직접 가입" : "기존 ID로 로그인"}</summary><div class="local-auth-body">${localAuthMarkup}</div></details>`;
+    const sessionAccount = currentAccount();
+    if (sessionAccount) authBody.insertAdjacentHTML("afterbegin", `<section class="session-resume" aria-label="현재 로그인 계정"><span class="session-resume-avatar" aria-hidden="true">${esc(sessionAccount.name.slice(0, 1))}</span><span><small>로그인된 계정</small><strong>${esc(sessionAccount.name)}</strong><em>@${esc(sessionAccount.handle)}</em></span><button class="primary-button" type="button" data-auth-resume>계속하기</button></section>`);
     setAuthStatus(!signupAllowed ? "현재 신규 회원가입이 일시 중지되었습니다." : "");
     $("[data-auth-body] input")?.focus();
   }
@@ -301,6 +305,7 @@
 
   function activateAccount(account, nextState) {
     localStorage.setItem(SESSION_KEY, account.id);
+    localStorage.setItem(AUTH_ENTRY_KEY, AUTH_ENTRY_VERSION);
     state = nextState || loadState(accountStateKey(account.id));
     state.profile = { ...state.profile, accountId: account.id, name: account.name, handle: account.handle, location: account.location || state.profile.location };
     registerAdminUser(account);
@@ -326,6 +331,7 @@
       state = accountState;
       state.profile = { ...state.profile, accountId: account.id, name: account.name, handle: account.handle, location: account.location || state.profile.location };
       saveState();
+      if (localStorage.getItem(AUTH_ENTRY_KEY) !== AUTH_ENTRY_VERSION) return renderAuth("login");
       hideAuth();
       return;
     }
@@ -634,6 +640,8 @@
   }
 
   document.addEventListener("click", event => {
+    const resumeButton = event.target.closest("[data-auth-resume]");
+    if (resumeButton) { localStorage.setItem(AUTH_ENTRY_KEY, AUTH_ENTRY_VERSION); hideAuth(); renderAll(); navigate("home"); toast("로그인 상태로 계속합니다."); return; }
     const socialButton = event.target.closest("[data-social-auth]");
     if (socialButton) return startSocialAuth(socialButton.dataset.socialAuth);
     const authMode = event.target.closest("[data-auth-mode]");
