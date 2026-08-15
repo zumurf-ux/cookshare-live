@@ -4,6 +4,9 @@
   const STORAGE_KEY = "cookshare.live.state.v3";
   const ADMIN_KEY = "cookshare.admin.state.v1";
   const REPORT_KEY = "cookshare.reports.v1";
+  const ACCOUNTS_KEY = "cookshare.accounts.v1";
+  const SESSION_KEY = "cookshare.session.v1";
+  const ACCOUNT_STATE_PREFIX = "cookshare.live.account.v1.";
   const iconPaths = {
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
     user: '<path d="M19 21a7 7 0 0 0-14 0"/><circle cx="12" cy="7" r="4"/>',
@@ -54,7 +57,7 @@
   ];
 
   const initialState = {
-    profile: { name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
+    profile: { accountId: "", name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
     liked: {}, saved: {}, hidden: {}, following: { "민지의 집밥": true, "주말식탁": true }, joinedChallenge: false, cart: {}, orders: [], posts: [], drafts: [],
     pointHistory: [{ id: "PT-240801", type: "적립", amount: 100, reason: "출석 참여", date: "2026. 8. 9. 09:00" }],
     comments: { r1: [{ id: "c1", author: "소소한밥상", body: "들깨가루 양을 조금 늘려도 맛있어요.", time: "오전 10:24" }] },
@@ -89,51 +92,151 @@
   const normalizeRecipeType = value => ({ 밥요리: "밥", 면요리: "면", 국물: "탕·찌개" })[value] || value || "기타";
   const normalizeCuisine = value => cuisineTypes.includes(value) ? value : "기타";
   const defaultSystemSettings = { registration: true, posting: true, market: true, maintenance: false };
+  const defaultAdminUsers = [
+    { id: "u1", name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", status: "정상" },
+    { id: "u2", name: "민지의 집밥", handle: "minji_table", location: "경기 성남시", status: "정상" },
+    { id: "u3", name: "주말식탁", handle: "weekend_table", location: "서울 송파구", status: "정상" }
+  ];
 
-  function loadState() {
+  function normalizeState(saved) {
+    if (!saved) return structuredClone(initialState);
+    return {
+      ...structuredClone(initialState),
+      ...saved,
+      profile: { ...initialState.profile, ...(saved.profile || {}) },
+      liked: { ...initialState.liked, ...(saved.liked || {}) },
+      saved: { ...initialState.saved, ...(saved.saved || {}) },
+      hidden: { ...initialState.hidden, ...(saved.hidden || {}) },
+      following: { ...initialState.following, ...(saved.following || {}) },
+      cart: saved.cart && typeof saved.cart === "object" ? saved.cart : {},
+      orders: Array.isArray(saved.orders) ? saved.orders : [],
+      posts: Array.isArray(saved.posts) ? saved.posts : [],
+      drafts: Array.isArray(saved.drafts) ? saved.drafts : [],
+      notifications: Array.isArray(saved.notifications) ? saved.notifications : structuredClone(initialState.notifications),
+      comments: { ...structuredClone(initialState.comments), ...(saved.comments || {}) },
+      settings: { ...initialState.settings, ...(saved.settings || {}) },
+      pointHistory: Array.isArray(saved.pointHistory) ? saved.pointHistory : structuredClone(initialState.pointHistory)
+    };
+  }
+
+  function loadState(key = STORAGE_KEY) {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (!saved) return structuredClone(initialState);
-      return {
-        ...structuredClone(initialState),
-        ...saved,
-        profile: { ...initialState.profile, ...(saved.profile || {}) },
-        liked: { ...initialState.liked, ...(saved.liked || {}) },
-        saved: { ...initialState.saved, ...(saved.saved || {}) },
-        hidden: { ...initialState.hidden, ...(saved.hidden || {}) },
-        following: { ...initialState.following, ...(saved.following || {}) },
-        cart: saved.cart && typeof saved.cart === "object" ? saved.cart : {},
-        orders: Array.isArray(saved.orders) ? saved.orders : [],
-        posts: Array.isArray(saved.posts) ? saved.posts : [],
-        drafts: Array.isArray(saved.drafts) ? saved.drafts : [],
-        notifications: Array.isArray(saved.notifications) ? saved.notifications : structuredClone(initialState.notifications),
-        comments: { ...structuredClone(initialState.comments), ...(saved.comments || {}) },
-        settings: { ...initialState.settings, ...(saved.settings || {}) },
-        pointHistory: Array.isArray(saved.pointHistory) ? saved.pointHistory : structuredClone(initialState.pointHistory)
-      };
+      return normalizeState(JSON.parse(localStorage.getItem(key)));
     } catch { return structuredClone(initialState); }
   }
 
   function loadAdminState() {
     try {
       const saved = JSON.parse(localStorage.getItem(ADMIN_KEY)) || {};
-      return { settings: { ...defaultSystemSettings, ...(saved.settings || {}) }, users: Array.isArray(saved.users) ? saved.users : [] };
-    } catch { return { settings: { ...defaultSystemSettings }, users: [] }; }
+      return { settings: { ...defaultSystemSettings, ...(saved.settings || {}) }, users: Array.isArray(saved.users) ? saved.users : structuredClone(defaultAdminUsers) };
+    } catch { return { settings: { ...defaultSystemSettings }, users: structuredClone(defaultAdminUsers) }; }
   }
 
+  function loadAccounts() {
+    try { const saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY)); return Array.isArray(saved) ? saved : []; }
+    catch { return []; }
+  }
+
+  function saveAccounts() { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts)); }
+  function accountStateKey(id) { return `${ACCOUNT_STATE_PREFIX}${id}`; }
+  function currentAccount() { const id = localStorage.getItem(SESSION_KEY); return accounts.find(account => account.id === id) || null; }
+  function normalizeHandle(value) { return String(value || "").trim().replace(/^@/, "").toLowerCase(); }
+  function normalizePhone(value) { return String(value || "").replace(/\D/g, ""); }
+  async function hashPin(value) { const bytes = new TextEncoder().encode(`today-one-bite:${value}`); const digest = await crypto.subtle.digest("SHA-256", bytes); return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join(""); }
+
+  const hadLegacyState = localStorage.getItem(STORAGE_KEY) !== null;
+  let accounts = loadAccounts();
   let state = loadState();
   let adminState = loadAdminState();
   let currentScreen = "home";
   let currentRecipeFilter = "전체";
   let currentCuisineFilter = "전체";
   let currentFeedFilter = "recommended";
+  let currentAuthMode = "login";
   let toastTimer;
   let challengeBannerObserver;
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const account = currentAccount();
+    if (account) localStorage.setItem(accountStateKey(account.id), JSON.stringify(state));
     window.dispatchEvent(new CustomEvent("cookshare-state-changed"));
     renderCounts();
+  }
+
+  function registerAdminUser(account) {
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem(ADMIN_KEY)) || {}; } catch { stored = {}; }
+    const users = Array.isArray(stored.users) ? stored.users : structuredClone(defaultAdminUsers);
+    const index = users.findIndex(user => user.id === account.id || user.handle === account.handle);
+    const user = { id: account.id, name: account.name, handle: account.handle, location: account.location || "지역 미설정", status: index >= 0 ? users[index].status || "정상" : "정상" };
+    if (index >= 0) users[index] = { ...users[index], ...user }; else users.unshift(user);
+    stored.users = users;
+    stored.settings = { ...defaultSystemSettings, ...(stored.settings || {}) };
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(stored));
+    adminState = loadAdminState();
+  }
+
+  function setAuthStatus(message = "") {
+    const node = $("[data-auth-status]");
+    if (node) node.textContent = message;
+  }
+
+  function renderAuth(mode = currentAuthMode) {
+    const root = $("[data-auth-root]");
+    const signupAllowed = adminState.settings.registration;
+    if (mode === "signup" && !signupAllowed) mode = "login";
+    currentAuthMode = mode;
+    root.hidden = false;
+    document.body.classList.add("auth-required");
+    $$('[data-auth-mode]').forEach(button => {
+      const active = button.dataset.authMode === mode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+      if (button.dataset.authMode === "signup") button.disabled = !signupAllowed;
+    });
+    $("[data-auth-body]").innerHTML = mode === "signup" ? `<form class="auth-form" data-signup-form><div class="field"><label for="signup-name">닉네임</label><input id="signup-name" name="name" maxlength="20" required autocomplete="name" placeholder="오늘한입에서 사용할 이름"></div><div class="field"><label for="signup-handle">사용자 ID</label><input id="signup-handle" name="handle" minlength="3" maxlength="24" required pattern="[a-z0-9_]+" autocapitalize="none" autocomplete="username" placeholder="영문 소문자, 숫자, 밑줄"></div><div class="field"><label for="signup-phone">휴대폰 번호</label><input id="signup-phone" name="phone" type="tel" inputmode="numeric" required autocomplete="tel" placeholder="01012345678"></div><div class="field"><label for="signup-pin">로그인 PIN</label><input id="signup-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><label class="auth-check"><input name="terms" type="checkbox" required>서비스 이용약관과 개인정보 처리 안내에 동의합니다.</label><button class="primary-button full-button" type="submit">간편 회원가입</button></form><p class="auth-help">가입 후 이 기기에서는 로그인 상태가 유지됩니다.</p>` : `<form class="auth-form" data-login-form><div class="field"><label for="login-id">사용자 ID 또는 휴대폰</label><input id="login-id" name="identifier" required autocomplete="username" placeholder="사용자 ID 또는 휴대폰 번호"></div><div class="field"><label for="login-pin">로그인 PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password" placeholder="숫자 4자리"></div><button class="primary-button full-button" type="submit">로그인</button></form><p class="auth-help">PIN을 잊었다면 운영자에게 계정 확인을 요청해 주세요.</p>`;
+    setAuthStatus(!signupAllowed ? "현재 신규 회원가입이 일시 중지되었습니다." : "");
+    $("[data-auth-body] input")?.focus();
+  }
+
+  function hideAuth() {
+    $("[data-auth-root]").hidden = true;
+    document.body.classList.remove("auth-required");
+    setAuthStatus();
+  }
+
+  function activateAccount(account, nextState) {
+    localStorage.setItem(SESSION_KEY, account.id);
+    state = nextState || loadState(accountStateKey(account.id));
+    state.profile = { ...state.profile, accountId: account.id, name: account.name, handle: account.handle, location: account.location || state.profile.location };
+    registerAdminUser(account);
+    saveState();
+    hideAuth();
+    renderAll();
+    navigate("home");
+  }
+
+  function initializeAuth() {
+    let account = currentAccount();
+    if (!account && !accounts.length && hadLegacyState) {
+      account = { id: uid("account"), name: state.profile.name, handle: state.profile.handle, phone: "", pinHash: "", needsPin: true, location: state.profile.location, createdAt: new Date().toISOString() };
+      accounts.push(account);
+      saveAccounts();
+      localStorage.setItem(SESSION_KEY, account.id);
+      state.profile.accountId = account.id;
+      localStorage.setItem(accountStateKey(account.id), JSON.stringify(state));
+      registerAdminUser(account);
+    }
+    if (account) {
+      const accountState = localStorage.getItem(accountStateKey(account.id)) ? loadState(accountStateKey(account.id)) : state;
+      state = accountState;
+      state.profile = { ...state.profile, accountId: account.id, name: account.name, handle: account.handle, location: account.location || state.profile.location };
+      saveState();
+      hideAuth();
+      return;
+    }
+    renderAuth(accounts.length ? "login" : "signup");
   }
 
   function addPointHistory(type, amount, reason) {
@@ -358,11 +461,18 @@
 
   function showSettings() {
     const switchButton = (key, label, description) => `<button class="menu-row" type="button" data-action="toggle-setting" data-key="${key}"><span>${icon(state.settings[key] ? "check" : "close")}</span><span class="sheet-row-copy"><strong>${label}</strong><small>${description}</small></span><small>${state.settings[key] ? "켬" : "끔"}</small></button>`;
-    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
+    const account = currentAccount();
+    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="change-pin"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${account?.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경"}</strong><small>숫자 4자리 PIN으로 계정을 보호합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="logout"><span>${icon("user")}</span><span class="sheet-row-copy"><strong>로그아웃</strong><small>@${esc(state.profile.handle)} 계정에서 로그아웃합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
   }
 
   function showProfileForm() {
     openSheet("프로필 수정", `<form data-profile-form><div class="field"><label for="profile-name">닉네임</label><input id="profile-name" name="name" required maxlength="20" value="${esc(state.profile.name)}"></div><div class="field"><label for="profile-handle">사용자 ID</label><input id="profile-handle" name="handle" required maxlength="24" value="${esc(state.profile.handle)}"></div><div class="field"><label for="profile-location">활동 지역</label><input id="profile-location" name="location" maxlength="30" value="${esc(state.profile.location)}"></div><button class="primary-button full-button" type="submit">저장</button></form>`);
+  }
+
+  function showPinForm() {
+    const account = currentAccount();
+    if (!account) return renderAuth("login");
+    openSheet(account.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경", `<form data-pin-form>${account.needsPin ? "" : '<div class="field"><label for="current-pin">현재 PIN</label><input id="current-pin" name="currentPin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password"></div>'}<div class="field"><label for="new-pin">새 PIN</label><input id="new-pin" name="newPin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><div class="field"><label for="confirm-pin">새 PIN 확인</label><input id="confirm-pin" name="confirmPin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password"></div><button class="primary-button full-button" type="submit">PIN 저장</button></form>`);
   }
 
   function handleAction(action, id, button) {
@@ -388,6 +498,8 @@
     if (action === "order-detail") return showOrder(id);
     if (action === "cancel-order") { const order = state.orders.find(item => item.id === id); if (!order) return; if (!confirm("이 주문을 취소할까요?")) return; order.status = "주문 취소"; saveState(); toast("주문을 취소했습니다."); return showOrder(id); }
     if (action === "settings") return showSettings();
+    if (action === "change-pin") return showPinForm();
+    if (action === "logout") { const account = currentAccount(); if (account?.needsPin) { toast("로그아웃 전에 로그인 PIN을 설정해 주세요."); return showPinForm(); } saveState(); localStorage.removeItem(SESSION_KEY); closeSheet(); renderAuth("login"); setAuthStatus("안전하게 로그아웃되었습니다."); return; }
     if (action === "edit-profile") return showProfileForm();
     if (action === "points") return showPoints();
     if (action === "saved-recipes") { const saved = allRecipes().filter(recipe => state.saved[recipe.id]); return openSheet("저장한 레시피", saved.length ? `<div class="sheet-list">${saved.map(recipe => `<button class="menu-row" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span>${icon(recipe.icon || "image")}</span><strong>${esc(recipe.title)}</strong><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>저장한 레시피가 없습니다</strong>마음에 드는 레시피의 저장 버튼을 눌러보세요.</div>'); }
@@ -406,6 +518,8 @@
   }
 
   document.addEventListener("click", event => {
+    const authMode = event.target.closest("[data-auth-mode]");
+    if (authMode) return renderAuth(authMode.dataset.authMode);
     const closeButton = event.target.closest("[data-close-sheet]");
     if (closeButton) return closeSheet();
     const nav = event.target.closest("[data-nav]");
@@ -422,6 +536,58 @@
 
   document.addEventListener("submit", async event => {
     event.preventDefault();
+    if (event.target.matches("[data-signup-form]")) {
+      if (!adminState.settings.registration) return setAuthStatus("현재 신규 회원가입이 일시 중지되었습니다.");
+      const data = Object.fromEntries(new FormData(event.target));
+      const name = String(data.name || "").trim();
+      const handle = normalizeHandle(data.handle);
+      const phone = normalizePhone(data.phone);
+      const pin = String(data.pin || "");
+      if (!/^[a-z0-9_]{3,24}$/.test(handle)) return setAuthStatus("사용자 ID는 영문 소문자, 숫자, 밑줄로 3자 이상 입력해 주세요.");
+      if (!/^01\d{8,9}$/.test(phone)) return setAuthStatus("휴대폰 번호를 정확히 입력해 주세요.");
+      if (!/^\d{4}$/.test(pin)) return setAuthStatus("로그인 PIN은 숫자 4자리로 입력해 주세요.");
+      if (accounts.some(account => account.handle === handle)) return setAuthStatus("이미 사용 중인 사용자 ID입니다.");
+      if (accounts.some(account => account.phone === phone)) return setAuthStatus("이미 가입된 휴대폰 번호입니다.");
+      const account = { id: uid("account"), name, handle, phone, pinHash: await hashPin(pin), needsPin: false, location: "지역 미설정", createdAt: new Date().toISOString() };
+      accounts.push(account);
+      saveAccounts();
+      const nextState = structuredClone(initialState);
+      nextState.profile = { ...nextState.profile, accountId: account.id, name, handle, location: account.location, points: 500 };
+      nextState.pointHistory = [{ id: uid("PT"), type: "적립", amount: 500, reason: "신규 회원 웰컴 포인트", date: new Date().toLocaleString("ko-KR") }];
+      nextState.notifications = [{ id: uid("notification"), title: "오늘한입 가입 완료", body: "간편 회원가입이 완료되었습니다. 첫 레시피를 기록해 보세요.", read: false }];
+      localStorage.setItem(accountStateKey(account.id), JSON.stringify(nextState));
+      activateAccount(account, nextState);
+      toast("간편 회원가입이 완료되었습니다.");
+      return;
+    }
+    if (event.target.matches("[data-login-form]")) {
+      const data = Object.fromEntries(new FormData(event.target));
+      const identifier = String(data.identifier || "").trim().toLowerCase();
+      const phone = normalizePhone(identifier);
+      const account = accounts.find(item => item.handle === normalizeHandle(identifier) || (phone && item.phone === phone));
+      if (!account) return setAuthStatus("가입 정보를 찾을 수 없습니다.");
+      if (account.needsPin || !account.pinHash) return setAuthStatus("이 계정은 기존 기기에서 먼저 로그인 PIN을 설정해야 합니다.");
+      if (account.pinHash !== await hashPin(String(data.pin || ""))) return setAuthStatus("로그인 PIN이 일치하지 않습니다.");
+      const status = adminState.users.find(user => user.id === account.id || user.handle === account.handle)?.status || "정상";
+      if (status !== "정상") return setAuthStatus(`현재 ${status} 상태의 계정입니다. 운영자에게 문의해 주세요.`);
+      activateAccount(account);
+      toast("로그인했습니다.");
+      return;
+    }
+    if (event.target.matches("[data-pin-form]")) {
+      const account = currentAccount();
+      if (!account) return renderAuth("login");
+      const data = Object.fromEntries(new FormData(event.target));
+      if (!/^\d{4}$/.test(String(data.newPin || ""))) return toast("새 PIN은 숫자 4자리로 입력해 주세요.");
+      if (data.newPin !== data.confirmPin) return toast("새 PIN 확인이 일치하지 않습니다.");
+      if (!account.needsPin && account.pinHash !== await hashPin(String(data.currentPin || ""))) return toast("현재 PIN이 일치하지 않습니다.");
+      account.pinHash = await hashPin(data.newPin);
+      account.needsPin = false;
+      saveAccounts();
+      closeSheet();
+      toast("로그인 PIN을 저장했습니다.");
+      return;
+    }
     if (event.target.matches("[data-comment-form]")) {
       const form = event.target;
       const body = new FormData(form).get("body").trim();
@@ -434,7 +600,12 @@
     }
     if (event.target.matches("[data-profile-form]")) {
       const data = Object.fromEntries(new FormData(event.target));
-      state.profile = { ...state.profile, name: data.name.trim(), handle: data.handle.trim().replace(/^@/, ""), location: data.location.trim() };
+      const account = currentAccount();
+      const handle = normalizeHandle(data.handle);
+      if (!/^[a-z0-9_]{3,24}$/.test(handle)) return toast("사용자 ID는 영문 소문자, 숫자, 밑줄로 입력해 주세요.");
+      if (accounts.some(item => item.id !== account?.id && item.handle === handle)) return toast("이미 사용 중인 사용자 ID입니다.");
+      state.profile = { ...state.profile, name: data.name.trim(), handle, location: data.location.trim() || "지역 미설정" };
+      if (account) { account.name = state.profile.name; account.handle = handle; account.location = state.profile.location; saveAccounts(); registerAdminUser(account); }
       saveState(); closeSheet(); renderCounts(); toast("프로필을 수정했습니다."); return;
     }
     if (event.target.matches("[data-create-form]")) {
@@ -484,8 +655,10 @@
   }, true);
 
   window.addEventListener("storage", event => {
-    if (event.key === STORAGE_KEY) { state = loadState(); renderAll(); }
-    if (event.key === ADMIN_KEY) { adminState = loadAdminState(); renderAll(); if (adminState.settings.maintenance) toast("운영자 설정으로 서비스 점검이 시작되었습니다."); }
+    if (event.key === STORAGE_KEY) { state = loadState(); const account = currentAccount(); if (account) localStorage.setItem(accountStateKey(account.id), JSON.stringify(state)); renderAll(); }
+    if (event.key === ADMIN_KEY) { adminState = loadAdminState(); renderAll(); if (!$("[data-auth-root]").hidden) renderAuth(currentAuthMode); if (adminState.settings.maintenance) toast("운영자 설정으로 서비스 점검이 시작되었습니다."); }
+    if (event.key === ACCOUNTS_KEY) accounts = loadAccounts();
+    if (event.key === SESSION_KEY && !currentAccount()) renderAuth("login");
   });
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
 
@@ -498,6 +671,7 @@
     if (adminState.settings.maintenance && currentScreen !== "profile") navigate("profile");
   }
 
+  initializeAuth();
   renderAll();
   const challengeBanner = $("[data-challenge-banner]");
   if (challengeBanner) {

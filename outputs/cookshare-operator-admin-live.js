@@ -26,7 +26,7 @@
   };
 
   const defaultUserState = {
-    profile: { name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
+    profile: { accountId: "", name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
     posts: [], orders: [], liked: {}, saved: {}, hidden: {}, notifications: [], pointHistory: []
   };
   const defaultAdminState = {
@@ -164,11 +164,15 @@
   }
 
   function renderUsers() {
-    if (userState.profile) adminState.users[0] = { ...adminState.users[0], name: userState.profile.name, handle: userState.profile.handle, location: userState.profile.location };
+    if (userState.profile) {
+      const currentIndex = adminState.users.findIndex(user => (userState.profile.accountId && user.id === userState.profile.accountId) || user.handle === userState.profile.handle);
+      const currentUser = { id: userState.profile.accountId || adminState.users[currentIndex]?.id || uid("user"), name: userState.profile.name, handle: userState.profile.handle, location: userState.profile.location, status: currentIndex >= 0 ? adminState.users[currentIndex].status : "정상" };
+      if (currentIndex >= 0) adminState.users[currentIndex] = { ...adminState.users[currentIndex], ...currentUser }; else adminState.users.unshift(currentUser);
+    }
     const query = ($("[data-user-search]")?.value || "").trim().toLowerCase();
     const filter = $("[data-user-status]")?.value || "all";
-    const rows = adminState.users.map((user, index) => ({ ...user, sourceIndex: index })).filter(user => (filter === "all" || user.status === filter) && `${user.name} ${user.handle} ${user.location}`.toLowerCase().includes(query));
-    $("[data-user-table]").innerHTML = rows.length ? rows.map(user => `<tr><td><strong>${esc(user.name)}</strong></td><td>@${esc(user.handle)}</td><td>${esc(user.location)}</td><td>${user.sourceIndex === 0 ? userState.posts.length : user.sourceIndex + 3}</td><td>${user.sourceIndex === 0 ? Number(userState.profile?.points || 0).toLocaleString("ko-KR") : (5600 + user.sourceIndex * 2100).toLocaleString("ko-KR")} P</td><td><span class="status-pill ${statusClass(user.status)}">${esc(user.status)}</span></td><td><button class="small-button" type="button" data-admin-action="user-detail" data-id="${esc(user.id)}">관리</button></td></tr>`).join("") : '<tr><td colspan="7"><div class="admin-empty"><strong>조건에 맞는 회원이 없습니다</strong>검색어 또는 상태 필터를 변경해 주세요.</div></td></tr>';
+    const rows = adminState.users.map((user, index) => ({ ...user, sourceIndex: index, isCurrent: (userState.profile?.accountId && user.id === userState.profile.accountId) || user.handle === userState.profile?.handle })).filter(user => (filter === "all" || user.status === filter) && `${user.name} ${user.handle} ${user.location}`.toLowerCase().includes(query));
+    $("[data-user-table]").innerHTML = rows.length ? rows.map(user => `<tr><td><strong>${esc(user.name)}</strong></td><td>@${esc(user.handle)}</td><td>${esc(user.location)}</td><td>${user.isCurrent ? userState.posts.length : user.sourceIndex + 3}</td><td>${user.isCurrent ? Number(userState.profile?.points || 0).toLocaleString("ko-KR") : (5600 + user.sourceIndex * 2100).toLocaleString("ko-KR")} P</td><td><span class="status-pill ${statusClass(user.status)}">${esc(user.status)}</span></td><td><button class="small-button" type="button" data-admin-action="user-detail" data-id="${esc(user.id)}">관리</button></td></tr>`).join("") : '<tr><td colspan="7"><div class="admin-empty"><strong>조건에 맞는 회원이 없습니다</strong>검색어 또는 상태 필터를 변경해 주세요.</div></td></tr>';
   }
 
   function renderPoints() {

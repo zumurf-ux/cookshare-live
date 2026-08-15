@@ -11,6 +11,40 @@
   --recipe-shadow: 0 8px 24px rgba(48, 37, 23, .07);
 }
 
+.recipe-reference-page .auth-root {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: #f2f3f0;
+}
+.recipe-reference-page .auth-root[hidden] { display: none !important; }
+.recipe-reference-page .auth-card { width: min(100%, 430px); padding: 30px; border: 1px solid #d8ddd9; border-radius: 8px; background: #fafaf8; }
+.recipe-reference-page .auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+.recipe-reference-page .auth-brand .fried-egg-logo { flex: 0 0 auto; }
+.recipe-reference-page .auth-brand small { display: block; margin-bottom: 3px; color: #78807c; font-size: 12px; }
+.recipe-reference-page .auth-brand strong { display: block; color: #1d2421; font-size: 28px; letter-spacing: -.05em; }
+.recipe-reference-page .auth-tabs { display: grid; grid-template-columns: repeat(2,1fr); margin-bottom: 24px; border-bottom: 1px solid #cfd4d0; }
+.recipe-reference-page .auth-tabs button { min-height: 46px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #858c88; font-size: 14px; font-weight: 700; }
+.recipe-reference-page .auth-tabs button.active { border-bottom-color: #2d3934; color: #202824; }
+.recipe-reference-page .auth-form { display: grid; gap: 14px; }
+.recipe-reference-page .auth-form .field { margin: 0; }
+.recipe-reference-page .auth-form input { min-height: 50px; }
+.recipe-reference-page .auth-form .primary-button { margin-top: 4px; }
+.recipe-reference-page .auth-check { min-height: 44px; display: flex; align-items: center; gap: 9px; color: #535d58; font-size: 12px; }
+.recipe-reference-page .auth-check input { width: 18px; height: 18px; min-height: 0; margin: 0; }
+.recipe-reference-page .auth-help { margin: 16px 0 0; color: #7a827e; font-size: 11px; line-height: 1.6; text-align: center; }
+.recipe-reference-page .auth-status { min-height: 20px; margin: 12px 0 0; color: #a24735; font-size: 12px; text-align: center; }
+.recipe-reference-page.auth-required .app-shell { pointer-events: none; user-select: none; }
+
+@media (max-width: 480px) {
+  .recipe-reference-page .auth-root { place-items: stretch; padding: 0; background: #fafaf8; }
+  .recipe-reference-page .auth-card { width: 100%; min-height: 100dvh; padding: calc(42px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; }
+}
+
 .recipe-reference-page .row-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .recipe-reference-page .small-button { min-height: 36px; padding: 0 10px; border: 1px solid var(--recipe-line); border-radius: 8px; background: #fff; color: #39433f; font-size: 12px; font-weight: 700; }
 .recipe-reference-page .small-button:focus-visible { outline: 3px solid rgba(55, 92, 76, .2); outline-offset: 2px; }
