@@ -2,6 +2,8 @@
   "use strict";
 
   const STORAGE_KEY = "cookshare.live.state.v3";
+  const ADMIN_KEY = "cookshare.admin.state.v1";
+  const REPORT_KEY = "cookshare.reports.v1";
   const iconPaths = {
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
     user: '<path d="M19 21a7 7 0 0 0-14 0"/><circle cx="12" cy="7" r="4"/>',
@@ -53,7 +55,8 @@
 
   const initialState = {
     profile: { name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
-    liked: {}, saved: {}, hidden: {}, joinedChallenge: false, cart: {}, orders: [], posts: [], drafts: [],
+    liked: {}, saved: {}, hidden: {}, following: { "민지의 집밥": true, "주말식탁": true }, joinedChallenge: false, cart: {}, orders: [], posts: [], drafts: [],
+    pointHistory: [{ id: "PT-240801", type: "적립", amount: 100, reason: "출석 참여", date: "2026. 8. 9. 09:00" }],
     comments: { r1: [{ id: "c1", author: "소소한밥상", body: "들깨가루 양을 조금 늘려도 맛있어요.", time: "오전 10:24" }] },
     notifications: [
       { id: "n1", title: "챌린지 마감 안내", body: "두부 한 끼 챌린지가 6일 후 마감됩니다.", read: false },
@@ -85,18 +88,45 @@
   const cuisineTypes = ["양식", "일식", "한식", "중식", "기타"];
   const normalizeRecipeType = value => ({ 밥요리: "밥", 면요리: "면", 국물: "탕·찌개" })[value] || value || "기타";
   const normalizeCuisine = value => cuisineTypes.includes(value) ? value : "기타";
+  const defaultSystemSettings = { registration: true, posting: true, market: true, maintenance: false };
 
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return saved ? { ...structuredClone(initialState), ...saved } : structuredClone(initialState);
+      if (!saved) return structuredClone(initialState);
+      return {
+        ...structuredClone(initialState),
+        ...saved,
+        profile: { ...initialState.profile, ...(saved.profile || {}) },
+        liked: { ...initialState.liked, ...(saved.liked || {}) },
+        saved: { ...initialState.saved, ...(saved.saved || {}) },
+        hidden: { ...initialState.hidden, ...(saved.hidden || {}) },
+        following: { ...initialState.following, ...(saved.following || {}) },
+        cart: saved.cart && typeof saved.cart === "object" ? saved.cart : {},
+        orders: Array.isArray(saved.orders) ? saved.orders : [],
+        posts: Array.isArray(saved.posts) ? saved.posts : [],
+        drafts: Array.isArray(saved.drafts) ? saved.drafts : [],
+        notifications: Array.isArray(saved.notifications) ? saved.notifications : structuredClone(initialState.notifications),
+        comments: { ...structuredClone(initialState.comments), ...(saved.comments || {}) },
+        settings: { ...initialState.settings, ...(saved.settings || {}) },
+        pointHistory: Array.isArray(saved.pointHistory) ? saved.pointHistory : structuredClone(initialState.pointHistory)
+      };
     } catch { return structuredClone(initialState); }
   }
 
+  function loadAdminState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(ADMIN_KEY)) || {};
+      return { settings: { ...defaultSystemSettings, ...(saved.settings || {}) }, users: Array.isArray(saved.users) ? saved.users : [] };
+    } catch { return { settings: { ...defaultSystemSettings }, users: [] }; }
+  }
+
   let state = loadState();
+  let adminState = loadAdminState();
   let currentScreen = "home";
   let currentRecipeFilter = "전체";
   let currentCuisineFilter = "전체";
+  let currentFeedFilter = "recommended";
   let toastTimer;
   let challengeBannerObserver;
 
@@ -104,6 +134,26 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     window.dispatchEvent(new CustomEvent("cookshare-state-changed"));
     renderCounts();
+  }
+
+  function addPointHistory(type, amount, reason) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (!safeAmount) return;
+    state.pointHistory ||= [];
+    state.pointHistory.unshift({ id: uid("PT"), type, amount: safeAmount, reason, date: new Date().toLocaleString("ko-KR") });
+    state.profile.points = Math.max(0, Number(state.profile.points || 0) + (type === "적립" ? safeAmount : -safeAmount));
+  }
+
+  function accountStatus() {
+    return adminState.users.find(user => user.handle === state.profile.handle)?.status || "정상";
+  }
+
+  function serviceBlocked(feature) {
+    if (adminState.settings.maintenance) { toast("현재 서비스 점검 중입니다."); return true; }
+    if (accountStatus() !== "정상") { toast("계정 이용이 제한되어 있습니다."); return true; }
+    if (feature === "posting" && !adminState.settings.posting) { toast("콘텐츠 등록이 일시 중지되었습니다."); return true; }
+    if (feature === "market" && !adminState.settings.market) { toast("마켓 주문이 일시 중지되었습니다."); return true; }
+    return false;
   }
 
   function hydrateIcons(root = document) {
@@ -131,6 +181,7 @@
   }
 
   function navigate(screen) {
+    if (adminState.settings.maintenance && screen !== "profile") { toast("서비스 점검 중에는 내 정보만 확인할 수 있습니다."); screen = "profile"; }
     currentScreen = screen;
     $$(".screen").forEach(node => node.classList.toggle("active", node.dataset.screen === screen));
     $$(".nav-button").forEach(node => node.classList.toggle("active", node.dataset.nav === screen));
@@ -164,15 +215,27 @@
 
   function allPosts() {
     const base = [
-      { ...recipes[0], author: "민지의 집밥", handle: "@minji_table", title: "버터 없이도 고소한 들깨 두유 크림 파스타", body: "두유와 들깨가루로 완성한 15분 파스타입니다. 불을 약하게 줄인 뒤 소스를 섞으면 더 부드럽습니다.", likes: 128 },
-      { ...recipes[1], author: "주말식탁", handle: "@weekend_table", title: "무 하나로 끝내는 들기름 솥밥", body: "제철 무를 굵게 채 썰고 들기름을 둘러 은근하게 익혔어요. 양념장은 간장과 쪽파만 넣었습니다.", likes: 94 }
+      { ...recipes[0], author: "민지의 집밥", handle: "@minji_table", title: "버터 없이도 고소한 들깨 두유 크림 파스타", body: "두유와 들깨가루로 완성한 15분 파스타입니다. 불을 약하게 줄인 뒤 소스를 섞으면 더 부드럽습니다.", likes: 128, createdAt: "2026-08-14T11:20:00+09:00" },
+      { ...recipes[1], author: "주말식탁", handle: "@weekend_table", title: "무 하나로 끝내는 들기름 솥밥", body: "제철 무를 굵게 채 썰고 들기름을 둘러 은근하게 익혔어요. 양념장은 간장과 쪽파만 넣었습니다.", likes: 94, createdAt: "2026-08-13T18:40:00+09:00" }
     ];
     return [...state.posts, ...base].filter(post => !state.hidden[post.id]);
   }
 
+  function allRecipes() {
+    return [...state.posts, ...recipes].filter(recipe => !state.hidden[recipe.id]);
+  }
+
   function renderFeed() {
     const feed = $("[data-feed]");
-    const posts = allPosts();
+    let posts = allPosts();
+    if (currentFeedFilter === "following") posts = posts.filter(post => post.author === state.profile.name || state.following[post.author]);
+    if (currentFeedFilter === "latest") posts = [...posts].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    if (currentFeedFilter === "recommended") posts = [...posts].sort((a, b) => (Number(b.likes) + (state.liked[b.id] ? 1 : 0)) - (Number(a.likes) + (state.liked[a.id] ? 1 : 0)));
+    $$('[data-feed-filter]').forEach(node => {
+      const active = node.dataset.feedFilter === currentFeedFilter;
+      node.classList.toggle("active", active);
+      node.setAttribute("aria-selected", String(active));
+    });
     feed.innerHTML = posts.length ? posts.map(post => {
       const liked = Boolean(state.liked[post.id]);
       const saved = Boolean(state.saved[post.id]);
@@ -183,7 +246,7 @@
         <div class="post-actions"><button class="icon-button ${liked ? "liked" : ""}" type="button" data-action="like" data-id="${esc(post.id)}" aria-label="좋아요">${icon("heart")}</button><button class="icon-button" type="button" data-action="comments" data-id="${esc(post.id)}" aria-label="댓글 ${commentCount}개">${icon("comment")}</button><button class="icon-button save ${saved ? "saved" : ""}" type="button" data-action="save" data-id="${esc(post.id)}" aria-label="저장">${icon("bookmark")}</button></div>
         <div class="post-copy"><p class="likes">좋아요 ${(post.likes + (liked ? 1 : 0)).toLocaleString("ko-KR")}개</p><p><strong>${esc(post.title)}</strong><br>${esc(post.body)}</p><button type="button" data-action="comments" data-id="${esc(post.id)}">댓글 ${commentCount ? `${commentCount}개 모두 보기` : "작성하기"}</button></div>
       </article>`;
-    }).join("") : '<div class="card empty"><strong>표시할 게시물이 없습니다</strong>숨긴 게시물은 설정에서 다시 표시할 수 있습니다.</div>';
+    }).join("") : `<div class="card empty"><strong>${currentFeedFilter === "following" ? "팔로우한 크리에이터의 새 글이 없습니다" : "표시할 게시물이 없습니다"}</strong>${currentFeedFilter === "following" ? "크리에이터 스토리에서 팔로우를 추가해 보세요." : "숨긴 게시물은 설정에서 다시 표시할 수 있습니다."}</div>`;
   }
 
   function recipeMeta(recipe) {
@@ -199,7 +262,7 @@
 
   function renderRecipes() {
     const query = ($("[data-recipe-search]")?.value || "").trim().toLowerCase();
-    const filtered = recipes.filter(recipe => (currentRecipeFilter === "전체" || normalizeRecipeType(recipe.category) === currentRecipeFilter) && (currentCuisineFilter === "전체" || normalizeCuisine(recipe.cuisine) === currentCuisineFilter) && `${recipe.title} ${recipe.author} ${normalizeRecipeType(recipe.category)} ${normalizeCuisine(recipe.cuisine)}`.toLowerCase().includes(query));
+    const filtered = allRecipes().filter(recipe => (currentRecipeFilter === "전체" || normalizeRecipeType(recipe.category) === currentRecipeFilter) && (currentCuisineFilter === "전체" || normalizeCuisine(recipe.cuisine) === currentCuisineFilter) && `${recipe.title} ${recipe.author} ${normalizeRecipeType(recipe.category)} ${normalizeCuisine(recipe.cuisine)}`.toLowerCase().includes(query));
     $("[data-recipe-grid]").innerHTML = filtered.length ? filtered.map(recipe => `<button class="recipe-card" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span class="recipe-thumb"><img src="${esc(recipe.image)}" alt="" loading="lazy"></span><span class="recipe-copy"><strong>${esc(recipe.title)}</strong><span>${esc(normalizeCuisine(recipe.cuisine))} · ${esc(normalizeRecipeType(recipe.category))} · ${esc(recipe.time)}</span></span></button>`).join("") : '<div class="card empty" style="grid-column:1/-1"><strong>검색 결과가 없습니다</strong>다른 요리 종류나 카테고리를 선택해 보세요.</div>';
   }
 
@@ -224,13 +287,15 @@
   function recipeById(id) {
     const custom = state.posts.find(post => post.id === id);
     if (custom) return { ...custom, time: "사용자 등록", author: custom.author };
-    return recipes.find(recipe => recipe.id === id) || recipes[0];
+    return recipes.find(recipe => recipe.id === id) || null;
   }
 
   function showRecipe(id) {
     const recipe = recipeById(id);
+    if (!recipe) { toast("삭제되었거나 찾을 수 없는 레시피입니다."); return; }
     const saved = Boolean(state.saved[id]);
-    openSheet("레시피 상세", `<div class="recipe-detail-photo">${recipe.image ? `<img src="${esc(recipe.image)}" alt="${esc(recipe.title)}">` : icon("image", "icon icon-lg")}</div><article class="hero-card"><p class="eyebrow">${esc(normalizeCuisine(recipe.cuisine))} · ${esc(normalizeRecipeType(recipe.category))}</p><h2>${esc(recipe.title)}</h2><p>${esc(recipe.body || `${recipe.author}의 실제 조리 기록입니다. 재료 준비부터 완성까지 순서대로 확인하세요.`)}</p><div class="recipe-meta">${recipeMeta(recipe)}</div></article><div class="section-head"><h2>조리 정보</h2></div><div class="sheet-list"><div class="sheet-row"><span>${icon("clock")}</span><div class="sheet-row-copy"><strong>예상 조리 시간</strong><small>${esc(recipe.time || "20분")}</small></div></div><div class="sheet-row"><span>${icon("user")}</span><div class="sheet-row-copy"><strong>작성자</strong><small>${esc(recipe.author)}</small></div></div></div><div style="height:12px"></div><button class="primary-button full-button" type="button" data-action="save" data-id="${esc(id)}">${saved ? "저장 취소" : "레시피 저장"}</button>`);
+    const ownPost = state.posts.some(post => post.id === id);
+    openSheet("레시피 상세", `<div class="recipe-detail-photo">${recipe.image ? `<img src="${esc(recipe.image)}" alt="${esc(recipe.title)}">` : icon("image", "icon icon-lg")}</div><article class="hero-card"><p class="eyebrow">${esc(normalizeCuisine(recipe.cuisine))} · ${esc(normalizeRecipeType(recipe.category))}</p><h2>${esc(recipe.title)}</h2><p>${esc(recipe.body || `${recipe.author}의 실제 조리 기록입니다. 재료 준비부터 완성까지 순서대로 확인하세요.`)}</p><div class="recipe-meta">${recipeMeta(recipe)}</div></article><div class="section-head"><h2>조리 정보</h2></div><div class="sheet-list"><div class="sheet-row"><span>${icon("clock")}</span><div class="sheet-row-copy"><strong>예상 조리 시간</strong><small>${esc(recipe.time || "20분")}</small></div></div><div class="sheet-row"><span>${icon("user")}</span><div class="sheet-row-copy"><strong>작성자</strong><small>${esc(recipe.author)}</small></div></div></div><div style="height:12px"></div><button class="primary-button full-button" type="button" data-action="save" data-id="${esc(id)}">${saved ? "저장 취소" : "레시피 저장"}</button>${ownPost ? `<button class="secondary-button full-button" style="margin-top:8px" type="button" data-action="edit-post" data-id="${esc(id)}">내 레시피 수정</button>` : ""}`);
   }
 
   function showComments(id) {
@@ -243,29 +308,57 @@
   }
 
   function showCart() {
-    const entries = Object.entries(state.cart).filter(([, quantity]) => quantity > 0);
+    const entries = Object.entries(state.cart).filter(([id, quantity]) => quantity > 0 && products.some(product => product.id === id));
     const total = entries.reduce((sum, [id, quantity]) => sum + products.find(product => product.id === id).price * quantity, 0);
     openSheet("장바구니", entries.length ? `<div class="sheet-list">${entries.map(([id, quantity]) => { const product = products.find(item => item.id === id); return `<div class="sheet-row"><span>${icon(product.icon)}</span><div class="sheet-row-copy"><strong>${esc(product.name)}</strong><small>${money(product.price)}</small></div><div class="quantity"><button type="button" data-action="cart-quantity" data-id="${id}" data-delta="-1" aria-label="수량 줄이기">−</button><strong>${quantity}</strong><button type="button" data-action="cart-quantity" data-id="${id}" data-delta="1" aria-label="수량 늘리기">+</button></div></div>`; }).join("")}</div><div class="card" style="margin:12px 0;padding:15px;display:flex;justify-content:space-between"><span>결제 예정 금액</span><strong>${money(total)}</strong></div><button class="primary-button full-button" type="button" data-action="checkout">주문하기</button>` : '<div class="card empty"><strong>장바구니가 비어 있습니다</strong>마켓에서 필요한 식재료를 담아보세요.</div>');
   }
 
   function showProduct(id) {
     const product = products.find(item => item.id === id);
+    if (!product) { toast("상품 정보를 찾을 수 없습니다."); return; }
     openSheet("상품 상세", `<div class="recipe-detail-photo"><img src="${esc(product.image)}" alt="${esc(product.name)}"></div><article class="hero-card"><p class="eyebrow">${esc(product.category)} · 무료배송</p><h2>${esc(product.name)}</h2><p>${esc(product.detail)}</p><strong style="font-size:22px">${money(product.price)}</strong></article><button class="primary-button full-button" type="button" data-action="add-cart" data-id="${product.id}">장바구니 담기</button>`);
   }
 
-  function showCreate(noteOnly = false) {
-    const typeOptions = recipeTypes.map(type => `<option value="${esc(type)}">${esc(type)}</option>`).join("");
-    const cuisineOptions = cuisineTypes.map(cuisine => `<option value="${esc(cuisine)}"${cuisine === "한식" ? " selected" : ""}>${esc(cuisine)}</option>`).join("");
-    openSheet(noteOnly ? "간단 기록" : "레시피 등록", `<form data-create-form><div class="field"><label for="post-title">제목</label><input id="post-title" name="title" maxlength="60" required placeholder="요리 이름을 입력하세요"></div><div class="field"><label for="post-body">조리법과 이야기</label><textarea id="post-body" name="body" maxlength="1000" required placeholder="재료와 조리 과정을 구체적으로 기록해 주세요"></textarea></div>${noteOnly ? "" : '<div class="field"><label for="post-image">완성 사진</label><input id="post-image" name="image" type="file" accept="image/*"></div>'}<div class="field-grid"><div class="field"><label for="post-cuisine">카테고리</label><select id="post-cuisine" name="cuisine" required>${cuisineOptions}</select></div><div class="field"><label for="post-category">요리 종류</label><select id="post-category" name="category" required>${typeOptions}</select></div></div><button class="primary-button full-button" type="submit">게시하기</button><button class="secondary-button full-button" style="margin-top:8px" type="button" data-action="save-draft">임시 저장</button></form>`);
+  function showCreate(noteOnly = false, source = {}) {
+    if (serviceBlocked("posting")) return;
+    const selectedType = normalizeRecipeType(source.category || "밥");
+    const selectedCuisine = normalizeCuisine(source.cuisine || "한식");
+    const typeOptions = recipeTypes.map(type => `<option value="${esc(type)}"${type === selectedType ? " selected" : ""}>${esc(type)}</option>`).join("");
+    const cuisineOptions = cuisineTypes.map(cuisine => `<option value="${esc(cuisine)}"${cuisine === selectedCuisine ? " selected" : ""}>${esc(cuisine)}</option>`).join("");
+    const draftId = source.draftId || (source.id?.startsWith("draft-") ? source.id : "");
+    const postId = source.postId || (source.id?.startsWith("post-") ? source.id : "");
+    const existingImage = source.image || "";
+    const isEditingPost = Boolean(postId);
+    const title = isEditingPost ? "레시피 수정" : draftId ? "임시 저장 글 이어쓰기" : noteOnly ? "간단 기록" : "레시피 등록";
+    openSheet(title, `<form data-create-form data-note-only="${noteOnly}" data-draft-id="${esc(draftId)}" data-post-id="${esc(postId)}"><div class="field"><label for="post-title">제목</label><input id="post-title" name="title" maxlength="60" required placeholder="요리 이름을 입력하세요" value="${esc(source.title || "")}"></div><div class="field"><label for="post-body">조리법과 이야기</label><textarea id="post-body" name="body" maxlength="1000" required placeholder="재료와 조리 과정을 구체적으로 기록해 주세요">${esc(source.body || "")}</textarea></div>${noteOnly ? "" : `<div class="field"><label for="post-image">완성 사진</label><input id="post-image" name="image" type="file" accept="image/*"><input name="existingImage" type="hidden" value="${esc(existingImage)}">${existingImage ? '<small>새 사진을 선택하지 않으면 기존 사진을 유지합니다.</small>' : ""}</div>`}<div class="field-grid"><div class="field"><label for="post-cuisine">카테고리</label><select id="post-cuisine" name="cuisine" required>${cuisineOptions}</select></div><div class="field"><label for="post-category">요리 종류</label><select id="post-category" name="category" required>${typeOptions}</select></div></div><button class="primary-button full-button" type="submit">${isEditingPost ? "수정 완료" : "게시하기"}</button>${isEditingPost ? `<button class="danger-button full-button" style="margin-top:8px" type="button" data-action="delete-post" data-id="${esc(postId)}">게시물 삭제</button>` : '<button class="secondary-button full-button" style="margin-top:8px" type="button" data-action="save-draft">임시 저장</button>'}</form>`);
   }
 
   function showOrders() {
-    openSheet("주문 내역", state.orders.length ? `<div class="sheet-list">${state.orders.map(order => `<div class="sheet-row"><span>${icon("box")}</span><div class="sheet-row-copy"><strong>${esc(order.number)} · ${money(order.total)}</strong><small>${esc(order.date)} · ${esc(order.status)}</small></div></div>`).join("")}</div>` : '<div class="card empty"><strong>주문 내역이 없습니다</strong>첫 주문을 완료하면 배송 상태를 확인할 수 있습니다.</div>');
+    openSheet("주문 내역", state.orders.length ? `<div class="sheet-list">${state.orders.map(order => `<button class="menu-row" type="button" data-action="order-detail" data-id="${esc(order.id)}"><span>${icon("box")}</span><span class="sheet-row-copy"><strong>${esc(order.number)} · ${money(order.total)}</strong><small>${esc(order.date)} · ${esc(order.status)}</small></span><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>주문 내역이 없습니다</strong>첫 주문을 완료하면 배송 상태를 확인할 수 있습니다.</div>');
+  }
+
+  function showOrder(id) {
+    const order = state.orders.find(item => item.id === id);
+    if (!order) { toast("주문 정보를 찾을 수 없습니다."); return; }
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemRows = items.length ? items.map(item => `<div class="sheet-row"><span>${icon("bag")}</span><div class="sheet-row-copy"><strong>${esc(item.name)}</strong><small>${money(item.price)} · ${item.quantity}개</small></div><strong>${money(item.price * item.quantity)}</strong></div>`).join("") : '<div class="sheet-row"><span>' + icon("box") + '</span><div class="sheet-row-copy"><strong>이전 주문</strong><small>상품 상세 정보가 저장되지 않은 주문입니다.</small></div></div>';
+    const cancellable = ["결제 완료", "상품 준비"].includes(order.status);
+    openSheet("주문 상세", `<article class="card hero-card"><p class="eyebrow">${esc(order.status)}</p><h2>${esc(order.number)}</h2><p>${esc(order.date)} 주문</p><strong>${money(order.total)}</strong></article><div class="section-head"><h2>주문 상품</h2></div><div class="sheet-list">${itemRows}</div>${cancellable ? `<button class="danger-button full-button" style="margin-top:12px" type="button" data-action="cancel-order" data-id="${esc(id)}">주문 취소</button>` : ""}`);
+  }
+
+  function showPoints() {
+    const history = state.pointHistory || [];
+    openSheet("포인트", `<article class="card hero-card"><p class="eyebrow">사용 가능 포인트</p><h2>${state.profile.points.toLocaleString("ko-KR")} P</h2><p>레시피 참여와 마켓 구매로 적립된 포인트입니다.</p></article><div class="section-head"><h2>이용 내역</h2></div><div class="sheet-list">${history.length ? history.map(item => `<div class="sheet-row"><span>${icon("point")}</span><div class="sheet-row-copy"><strong>${esc(item.reason)}</strong><small>${esc(item.date)}</small></div><strong>${item.type === "적립" ? "+" : "-"}${Number(item.amount).toLocaleString("ko-KR")} P</strong></div>`).join("") : '<div class="empty"><strong>포인트 내역이 없습니다</strong>적립과 사용 내역이 이곳에 표시됩니다.</div>'}</div>`);
+  }
+
+  function showHiddenPosts() {
+    const posts = [...state.posts, ...recipes].filter(post => state.hidden[post.id]);
+    openSheet("숨긴 게시물 관리", posts.length ? `<div class="sheet-list">${posts.map(post => `<button class="menu-row" type="button" data-action="restore-post" data-id="${esc(post.id)}"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>${esc(post.title)}</strong><small>눌러서 다시 표시</small></span><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>숨긴 게시물이 없습니다</strong>숨긴 콘텐츠가 생기면 이곳에서 복구할 수 있습니다.</div>');
   }
 
   function showSettings() {
     const switchButton = (key, label, description) => `<button class="menu-row" type="button" data-action="toggle-setting" data-key="${key}"><span>${icon(state.settings[key] ? "check" : "close")}</span><span class="sheet-row-copy"><strong>${label}</strong><small>${description}</small></span><small>${state.settings[key] ? "켬" : "끔"}</small></button>`;
-    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}</div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
+    openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
   }
 
   function showProfileForm() {
@@ -275,28 +368,37 @@
   function handleAction(action, id, button) {
     if (action === "notifications") return showNotifications();
     if (action === "cart") return showCart();
-    if (action === "story") return openSheet(button.dataset.name, `<article class="card hero-card"><p class="eyebrow">크리에이터 스토리</p><h2>${esc(button.dataset.name)}의 오늘 식탁</h2><p>제철 재료를 활용한 조리 과정과 장보기 팁을 확인해 보세요.</p></article>`);
+    if (action === "story") { const name = button.dataset.name; const following = Boolean(state.following[name]); return openSheet(name, `<article class="card hero-card"><p class="eyebrow">크리에이터 스토리</p><h2>${esc(name)}의 오늘 식탁</h2><p>제철 재료를 활용한 조리 과정과 장보기 팁을 확인해 보세요.</p></article><button class="${following ? "secondary-button" : "primary-button"} full-button" type="button" data-action="toggle-follow" data-name="${esc(name)}">${following ? "팔로우 취소" : "팔로우"}</button>`); }
+    if (action === "toggle-follow") { const name = button.dataset.name; state.following[name] ? delete state.following[name] : state.following[name] = true; saveState(); closeSheet(); renderFeed(); toast(state.following[name] ? `${name}님을 팔로우합니다.` : `${name}님 팔로우를 취소했습니다.`); return; }
     if (action === "challenge") { state.joinedChallenge = !state.joinedChallenge; saveState(); toast(state.joinedChallenge ? "챌린지에 참여했습니다." : "챌린지 참여를 취소했습니다."); button.textContent = state.joinedChallenge ? "참여 중" : "챌린지 참여"; return; }
     if (action === "like") { state.liked[id] ? delete state.liked[id] : state.liked[id] = true; saveState(); renderFeed(); return; }
     if (action === "save") { state.saved[id] ? delete state.saved[id] : state.saved[id] = true; saveState(); renderFeed(); toast(state.saved[id] ? "레시피를 저장했습니다." : "저장을 취소했습니다."); if ($("[data-sheet-root]").classList.contains("active")) closeSheet(); return; }
     if (action === "comments") return showComments(id);
     if (action === "recipe-detail") return showRecipe(id);
     if (action === "product-detail") return showProduct(id);
-    if (action === "add-cart") { state.cart[id] = (state.cart[id] || 0) + 1; saveState(); closeSheet(); toast("장바구니에 담았습니다."); return; }
+    if (action === "add-cart") { if (serviceBlocked("market")) return; state.cart[id] = (state.cart[id] || 0) + 1; saveState(); closeSheet(); toast("장바구니에 담았습니다."); return; }
     if (action === "cart-quantity") { state.cart[id] = Math.max(0, (state.cart[id] || 0) + Number(button.dataset.delta)); if (!state.cart[id]) delete state.cart[id]; saveState(); showCart(); return; }
-    if (action === "checkout") { const total = Object.entries(state.cart).reduce((sum, [productId, quantity]) => sum + products.find(product => product.id === productId).price * quantity, 0); state.orders.unshift({ id: uid("order"), number: `ORD-${new Date().toISOString().slice(0,10).replaceAll("-", "")}-${String(state.orders.length + 1).padStart(3, "0")}`, total, status: "결제 완료", date: new Date().toLocaleDateString("ko-KR") }); state.cart = {}; state.profile.points += Math.floor(total * .01); saveState(); closeSheet(); toast("주문이 완료되었습니다."); return; }
+    if (action === "checkout") { if (serviceBlocked("market")) return; const entries = Object.entries(state.cart).filter(([productId, quantity]) => quantity > 0 && products.some(product => product.id === productId)); if (!entries.length) return showCart(); const total = entries.reduce((sum, [productId, quantity]) => sum + products.find(product => product.id === productId).price * quantity, 0); const items = entries.map(([productId, quantity]) => { const product = products.find(item => item.id === productId); return { id: product.id, name: product.name, price: product.price, quantity }; }); state.orders.unshift({ id: uid("order"), number: `ORD-${new Date().toISOString().slice(0,10).replaceAll("-", "")}-${String(state.orders.length + 1).padStart(3, "0")}`, total, items, status: "결제 완료", date: new Date().toLocaleDateString("ko-KR"), createdAt: new Date().toISOString() }); state.cart = {}; addPointHistory("적립", Math.floor(total * .01), "마켓 구매 적립"); saveState(); closeSheet(); toast("주문이 완료되었습니다."); return; }
     if (action === "create-post") return showCreate(false);
     if (action === "create-note") return showCreate(true);
-    if (action === "drafts") return openSheet("임시 저장 글", state.drafts.length ? `<div class="sheet-list">${state.drafts.map(draft => `<div class="sheet-row"><span>${icon("archive")}</span><div class="sheet-row-copy"><strong>${esc(draft.title || "제목 없는 기록")}</strong><small>${esc(draft.date)}</small></div></div>`).join("")}</div>` : '<div class="card empty"><strong>임시 저장 글이 없습니다</strong>작성 중 저장한 기록이 이곳에 표시됩니다.</div>');
+    if (action === "drafts") return openSheet("임시 저장 글", state.drafts.length ? `<div class="sheet-list">${state.drafts.map(draft => `<div class="sheet-row"><span>${icon("archive")}</span><div class="sheet-row-copy"><strong>${esc(draft.title || "제목 없는 기록")}</strong><small>${esc(draft.date)}</small></div><div class="row-actions"><button class="small-button" type="button" data-action="edit-draft" data-id="${esc(draft.id)}">이어쓰기</button><button class="small-button" type="button" data-action="delete-draft" data-id="${esc(draft.id)}">삭제</button></div></div>`).join("")}</div>` : '<div class="card empty"><strong>임시 저장 글이 없습니다</strong>작성 중 저장한 기록이 이곳에 표시됩니다.</div>');
+    if (action === "edit-draft") { const draft = state.drafts.find(item => item.id === id); if (!draft) return toast("임시 저장 글을 찾을 수 없습니다."); return showCreate(Boolean(draft.noteOnly), { ...draft, draftId: draft.id }); }
+    if (action === "delete-draft") { state.drafts = state.drafts.filter(item => item.id !== id); saveState(); toast("임시 저장 글을 삭제했습니다."); return handleAction("drafts"); }
     if (action === "orders") return showOrders();
+    if (action === "order-detail") return showOrder(id);
+    if (action === "cancel-order") { const order = state.orders.find(item => item.id === id); if (!order) return; if (!confirm("이 주문을 취소할까요?")) return; order.status = "주문 취소"; saveState(); toast("주문을 취소했습니다."); return showOrder(id); }
     if (action === "settings") return showSettings();
     if (action === "edit-profile") return showProfileForm();
-    if (action === "points") return openSheet("포인트", `<article class="card hero-card"><p class="eyebrow">사용 가능 포인트</p><h2>${state.profile.points.toLocaleString("ko-KR")} P</h2><p>레시피 참여와 마켓 구매로 적립된 포인트입니다.</p></article>`);
-    if (action === "saved-recipes") { const saved = recipes.filter(recipe => state.saved[recipe.id]); return openSheet("저장한 레시피", saved.length ? `<div class="sheet-list">${saved.map(recipe => `<button class="menu-row" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span>${icon(recipe.icon)}</span><strong>${esc(recipe.title)}</strong><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>저장한 레시피가 없습니다</strong>마음에 드는 레시피의 저장 버튼을 눌러보세요.</div>'); }
+    if (action === "points") return showPoints();
+    if (action === "saved-recipes") { const saved = allRecipes().filter(recipe => state.saved[recipe.id]); return openSheet("저장한 레시피", saved.length ? `<div class="sheet-list">${saved.map(recipe => `<button class="menu-row" type="button" data-action="recipe-detail" data-id="${recipe.id}"><span>${icon(recipe.icon || "image")}</span><strong>${esc(recipe.title)}</strong><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>저장한 레시피가 없습니다</strong>마음에 드는 레시피의 저장 버튼을 눌러보세요.</div>'); }
     if (action === "my-posts") return openSheet("내 게시물", state.posts.length ? `<div class="sheet-list">${state.posts.map(post => `<button class="menu-row" type="button" data-action="recipe-detail" data-id="${post.id}"><span>${icon("image")}</span><strong>${esc(post.title)}</strong><span>${icon("chevron")}</span></button>`).join("")}</div>` : '<div class="card empty"><strong>작성한 게시물이 없습니다</strong>오늘의 식사를 첫 기록으로 남겨보세요.</div>');
-    if (action === "post-menu") return openSheet("게시물 관리", `<div class="sheet-list"><button class="menu-row" type="button" data-action="hide-post" data-id="${esc(id)}"><span>${icon("close")}</span><strong>이 게시물 숨기기</strong><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="report-post" data-id="${esc(id)}"><span>${icon("shield")}</span><strong>게시물 신고</strong><span>${icon("chevron")}</span></button></div>`);
+    if (action === "post-menu") { const ownPost = state.posts.some(post => post.id === id); return openSheet("게시물 관리", ownPost ? `<div class="sheet-list"><button class="menu-row" type="button" data-action="edit-post" data-id="${esc(id)}"><span>${icon("edit")}</span><strong>게시물 수정</strong><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="delete-post" data-id="${esc(id)}"><span>${icon("trash")}</span><strong>게시물 삭제</strong><span>${icon("chevron")}</span></button></div>` : `<div class="sheet-list"><button class="menu-row" type="button" data-action="hide-post" data-id="${esc(id)}"><span>${icon("close")}</span><strong>이 게시물 숨기기</strong><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="report-post" data-id="${esc(id)}"><span>${icon("shield")}</span><strong>게시물 신고</strong><span>${icon("chevron")}</span></button></div>`); }
+    if (action === "edit-post") { const post = state.posts.find(item => item.id === id); if (!post) return toast("게시물을 찾을 수 없습니다."); return showCreate(false, { ...post, postId: post.id }); }
+    if (action === "delete-post") { if (!confirm("게시물을 삭제할까요? 삭제 후 복구할 수 없습니다.")) return; state.posts = state.posts.filter(item => item.id !== id); delete state.comments[id]; delete state.saved[id]; delete state.liked[id]; delete state.hidden[id]; saveState(); closeSheet(); renderAll(); toast("게시물을 삭제했습니다."); return; }
     if (action === "hide-post") { state.hidden[id] = true; saveState(); closeSheet(); renderFeed(); toast("게시물을 숨겼습니다."); return; }
-    if (action === "report-post") { const reports = JSON.parse(localStorage.getItem("cookshare.reports.v1") || "[]"); reports.unshift({ id: uid("report"), target: id, reason: "사용자 신고", status: "대기", date: new Date().toLocaleString("ko-KR") }); localStorage.setItem("cookshare.reports.v1", JSON.stringify(reports)); closeSheet(); toast("운영팀에 신고를 접수했습니다."); return; }
+    if (action === "restore-post") { delete state.hidden[id]; saveState(); renderFeed(); toast("게시물을 다시 표시합니다."); return showHiddenPosts(); }
+    if (action === "hidden-posts") return showHiddenPosts();
+    if (action === "report-post") { const reports = JSON.parse(localStorage.getItem(REPORT_KEY) || "[]"); reports.unshift({ id: uid("report"), target: id, reason: "사용자 신고", status: "대기", date: new Date().toLocaleString("ko-KR") }); localStorage.setItem(REPORT_KEY, JSON.stringify(reports)); closeSheet(); toast("운영팀에 신고를 접수했습니다."); return; }
     if (action === "read-notification") { const item = state.notifications.find(notification => notification.id === id); if (item) item.read = true; saveState(); showNotifications(); return; }
     if (action === "read-all") { state.notifications.forEach(item => item.read = true); saveState(); showNotifications(); return; }
     if (action === "toggle-setting") { const key = button.dataset.key; state.settings[key] = !state.settings[key]; saveState(); showSettings(); return; }
@@ -313,7 +415,7 @@
     const cuisine = event.target.closest("[data-recipe-cuisine]");
     if (cuisine) { currentCuisineFilter = cuisine.dataset.recipeCuisine; renderRecipeCategories(); renderRecipes(); return; }
     const feedFilter = event.target.closest("[data-feed-filter]");
-    if (feedFilter) { $$('[data-feed-filter]').forEach(node => node.classList.toggle("active", node === feedFilter)); toast(`${feedFilter.textContent} 피드로 정렬했습니다.`); return; }
+    if (feedFilter) { currentFeedFilter = feedFilter.dataset.feedFilter; renderFeed(); return; }
     const action = event.target.closest("[data-action]");
     if (action) handleAction(action.dataset.action, action.dataset.id, action);
   });
@@ -336,13 +438,27 @@
       saveState(); closeSheet(); renderCounts(); toast("프로필을 수정했습니다."); return;
     }
     if (event.target.matches("[data-create-form]")) {
+      if (serviceBlocked("posting")) return;
       const form = event.target;
       const data = new FormData(form);
       const file = data.get("image");
-      let image = "";
+      let image = data.get("existingImage") || "";
       if (file && file.size) image = await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(file); });
-      const post = { id: uid("post"), author: state.profile.name, handle: `@${state.profile.handle}`, title: data.get("title").trim(), body: data.get("body").trim(), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), image, likes: 0, icon: "image", time: "방금" };
-      state.posts.unshift(post); state.comments[post.id] = []; state.profile.points += 50; saveState(); closeSheet(); navigate("home"); renderFeed(); toast("새 레시피를 게시했습니다.");
+      const postId = form.dataset.postId;
+      const draftId = form.dataset.draftId;
+      const values = { author: state.profile.name, handle: `@${state.profile.handle}`, title: data.get("title").trim(), body: data.get("body").trim(), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), image, icon: "image", updatedAt: new Date().toISOString() };
+      if (postId) {
+        const index = state.posts.findIndex(post => post.id === postId);
+        if (index < 0) return toast("수정할 게시물을 찾을 수 없습니다.");
+        state.posts[index] = { ...state.posts[index], ...values };
+      } else {
+        const post = { id: uid("post"), ...values, likes: 0, time: "방금", createdAt: new Date().toISOString() };
+        state.posts.unshift(post);
+        state.comments[post.id] = [];
+        addPointHistory("적립", 50, "레시피 등록");
+      }
+      if (draftId) state.drafts = state.drafts.filter(draft => draft.id !== draftId);
+      saveState(); closeSheet(); navigate("home"); renderAll(); toast(postId ? "레시피를 수정했습니다." : "새 레시피를 게시했습니다.");
     }
   });
 
@@ -351,22 +467,35 @@
     if (event.target.matches("[data-product-search]")) renderProducts();
   });
 
-  document.addEventListener("click", event => {
+  document.addEventListener("click", async event => {
     const draftButton = event.target.closest('[data-action="save-draft"]');
     if (!draftButton) return;
+    if (serviceBlocked("posting")) return;
     const form = draftButton.closest("form");
     const data = new FormData(form);
-    state.drafts.unshift({ id: uid("draft"), title: data.get("title"), body: data.get("body"), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), date: new Date().toLocaleString("ko-KR") });
+    const file = data.get("image");
+    let image = data.get("existingImage") || "";
+    if (file && file.size) image = await new Promise(resolve => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(file); });
+    const draftId = form.dataset.draftId || uid("draft");
+    const draft = { id: draftId, title: String(data.get("title") || "").trim(), body: String(data.get("body") || "").trim(), category: normalizeRecipeType(data.get("category")), cuisine: normalizeCuisine(data.get("cuisine")), image, noteOnly: form.dataset.noteOnly === "true", date: new Date().toLocaleString("ko-KR") };
+    const index = state.drafts.findIndex(item => item.id === draftId);
+    if (index >= 0) state.drafts[index] = draft; else state.drafts.unshift(draft);
     saveState(); closeSheet(); toast("임시 저장했습니다.");
   }, true);
 
-  window.addEventListener("storage", event => { if (event.key === STORAGE_KEY) { state = loadState(); renderAll(); } });
+  window.addEventListener("storage", event => {
+    if (event.key === STORAGE_KEY) { state = loadState(); renderAll(); }
+    if (event.key === ADMIN_KEY) { adminState = loadAdminState(); renderAll(); if (adminState.settings.maintenance) toast("운영자 설정으로 서비스 점검이 시작되었습니다."); }
+  });
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeSheet(); });
 
   function renderAll() {
     hydrateIcons(); renderRecipeCategories(); renderRecipes(); renderProducts(); renderFeed(); renderCounts(); applyChallengeBannerImage();
     const challengeButton = $('[data-action="challenge"]');
     if (challengeButton) challengeButton.textContent = state.joinedChallenge ? "참여 중" : "챌린지 참여";
+    document.body.classList.toggle("service-maintenance", adminState.settings.maintenance);
+    $$('[data-action="create-post"], [data-action="create-note"]').forEach(button => { button.disabled = !adminState.settings.posting || adminState.settings.maintenance; });
+    if (adminState.settings.maintenance && currentScreen !== "profile") navigate("profile");
   }
 
   renderAll();

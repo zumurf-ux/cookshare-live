@@ -27,7 +27,7 @@
 
   const defaultUserState = {
     profile: { name: "한끼연구소", handle: "one_meal_lab", location: "서울 마포구", points: 12450 },
-    posts: [], orders: [], liked: {}, saved: {}, hidden: {}, notifications: []
+    posts: [], orders: [], liked: {}, saved: {}, hidden: {}, notifications: [], pointHistory: []
   };
   const defaultAdminState = {
     users: [
@@ -35,6 +35,8 @@
       { id: "u2", name: "민지의 집밥", handle: "minji_table", location: "경기 성남시", status: "정상" },
       { id: "u3", name: "주말식탁", handle: "weekend_table", location: "서울 송파구", status: "정상" }
     ],
+    operators: [{ id: "op1", email: "admin@onebite.local", role: "전체 관리자", status: "활성" }],
+    invitations: [],
     pointLedger: [
       { id: "PT-240801", user: "한끼연구소", type: "적립", amount: 100, reason: "출석 참여", date: "2026. 8. 9. 09:00" },
       { id: "PT-240802", user: "민지의 집밥", type: "적립", amount: 500, reason: "챌린지 우수 참여", date: "2026. 8. 8. 18:30" }
@@ -58,15 +60,31 @@
   const money = value => `${Number(value).toLocaleString("ko-KR")}원`;
   const uid = prefix => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  function parse(key, fallback) { try { return { ...structuredClone(fallback), ...(JSON.parse(localStorage.getItem(key)) || {}) }; } catch { return structuredClone(fallback); } }
+  function parse(key, fallback) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key)) || {};
+      const merged = { ...structuredClone(fallback), ...saved };
+      if (fallback.settings) merged.settings = { ...fallback.settings, ...(saved.settings || {}) };
+      if (fallback.profile) merged.profile = { ...fallback.profile, ...(saved.profile || {}) };
+      Object.keys(fallback).forEach(name => { if (Array.isArray(fallback[name]) && !Array.isArray(saved[name])) merged[name] = structuredClone(fallback[name]); });
+      return merged;
+    } catch { return structuredClone(fallback); }
+  }
   let userState = parse(STATE_KEY, defaultUserState);
   let adminState = parse(ADMIN_KEY, defaultAdminState);
   let reports = (() => { try { return JSON.parse(localStorage.getItem(REPORT_KEY)) || []; } catch { return []; } })();
   let toastTimer;
 
-  function saveUser() { localStorage.setItem(STATE_KEY, JSON.stringify(userState)); }
+  function saveUser(notification) {
+    if (notification) {
+      userState.notifications ||= [];
+      userState.notifications.unshift({ id: uid("notification"), title: notification.title, body: notification.body, read: false });
+    }
+    localStorage.setItem(STATE_KEY, JSON.stringify(userState));
+  }
   function saveAdmin(action) {
     if (action) adminState.audit.unshift({ action, actor: "김운영", time: new Date().toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit" }) });
+    adminState.audit = adminState.audit.slice(0, 100);
     localStorage.setItem(ADMIN_KEY, JSON.stringify(adminState));
   }
   function saveReports() { localStorage.setItem(REPORT_KEY, JSON.stringify(reports)); }
@@ -75,6 +93,14 @@
   function statusClass(status) { if (["정상", "배송 완료", "처리 완료", "공개"].includes(status)) return "good"; if (["대기", "결제 완료", "상품 준비", "배송 중"].includes(status)) return "warn"; return "bad"; }
   function openModal(title, content) { $("[data-modal-title]").textContent = title; $("[data-modal-body]").innerHTML = content; const root = $("[data-admin-modal]"); root.classList.add("active"); root.setAttribute("aria-hidden", "false"); hydrateIcons(root); }
   function closeModal() { const root = $("[data-admin-modal]"); root.classList.remove("active"); root.setAttribute("aria-hidden", "true"); }
+  async function copyText(value) {
+    try { await navigator.clipboard.writeText(value); return true; }
+    catch {
+      const input = document.createElement("textarea");
+      input.value = value; input.style.position = "fixed"; input.style.opacity = "0"; document.body.append(input); input.select();
+      const copied = document.execCommand("copy"); input.remove(); return copied;
+    }
+  }
 
   function navigate(panel) {
     $$("[data-admin-panel]").forEach(node => node.classList.toggle("active", node.dataset.adminPanel === panel));
@@ -90,7 +116,7 @@
       { id: "r1", title: "들깨 두유 크림 파스타", author: "민지의 집밥", date: "2026. 8. 9.", likes: 128 },
       { id: "r2", title: "제철 무 들기름 솥밥", author: "주말식탁", date: "2026. 8. 9.", likes: 94 }
     ];
-    return [...userState.posts.map(post => ({ ...post, date: "2026. 8. 9.", likes: post.likes || 0 })), ...base];
+    return [...userState.posts.map(post => ({ ...post, date: post.createdAt ? new Date(post.createdAt).toLocaleDateString("ko-KR") : "2026. 8. 9.", likes: post.likes || 0 })), ...base];
   }
 
   function renderDashboard() {
@@ -139,11 +165,14 @@
 
   function renderUsers() {
     if (userState.profile) adminState.users[0] = { ...adminState.users[0], name: userState.profile.name, handle: userState.profile.handle, location: userState.profile.location };
-    $("[data-user-table]").innerHTML = adminState.users.map((user, index) => `<tr><td><strong>${esc(user.name)}</strong></td><td>@${esc(user.handle)}</td><td>${esc(user.location)}</td><td>${index === 0 ? userState.posts.length : index + 3}</td><td>${index === 0 ? Number(userState.profile?.points || 0).toLocaleString("ko-KR") : (5600 + index * 2100).toLocaleString("ko-KR")} P</td><td><span class="status-pill good">${esc(user.status)}</span></td></tr>`).join("");
+    const query = ($("[data-user-search]")?.value || "").trim().toLowerCase();
+    const filter = $("[data-user-status]")?.value || "all";
+    const rows = adminState.users.map((user, index) => ({ ...user, sourceIndex: index })).filter(user => (filter === "all" || user.status === filter) && `${user.name} ${user.handle} ${user.location}`.toLowerCase().includes(query));
+    $("[data-user-table]").innerHTML = rows.length ? rows.map(user => `<tr><td><strong>${esc(user.name)}</strong></td><td>@${esc(user.handle)}</td><td>${esc(user.location)}</td><td>${user.sourceIndex === 0 ? userState.posts.length : user.sourceIndex + 3}</td><td>${user.sourceIndex === 0 ? Number(userState.profile?.points || 0).toLocaleString("ko-KR") : (5600 + user.sourceIndex * 2100).toLocaleString("ko-KR")} P</td><td><span class="status-pill ${statusClass(user.status)}">${esc(user.status)}</span></td><td><button class="small-button" type="button" data-admin-action="user-detail" data-id="${esc(user.id)}">관리</button></td></tr>`).join("") : '<tr><td colspan="7"><div class="admin-empty"><strong>조건에 맞는 회원이 없습니다</strong>검색어 또는 상태 필터를 변경해 주세요.</div></td></tr>';
   }
 
   function renderPoints() {
-    $("[data-point-table]").innerHTML = adminState.pointLedger.map(item => `<tr><td>${esc(item.id)}</td><td>${esc(item.user)}</td><td><span class="status-pill ${item.type === "적립" ? "good" : "warn"}">${esc(item.type)}</span></td><td>${item.type === "적립" ? "+" : "-"}${Number(item.amount).toLocaleString("ko-KR")} P</td><td>${esc(item.reason)}</td><td>${esc(item.date)}</td></tr>`).join("");
+    $("[data-point-table]").innerHTML = adminState.pointLedger.length ? adminState.pointLedger.map(item => `<tr><td>${esc(item.id)}</td><td>${esc(item.user)}</td><td><span class="status-pill ${item.type === "적립" ? "good" : "warn"}">${esc(item.type)}</span></td><td>${item.type === "적립" ? "+" : "-"}${Number(item.amount).toLocaleString("ko-KR")} P</td><td>${esc(item.reason)}</td><td>${esc(item.date)}</td></tr>`).join("") : '<tr><td colspan="6"><div class="admin-empty"><strong>포인트 내역이 없습니다</strong>포인트 조정 내역이 이곳에 표시됩니다.</div></td></tr>';
   }
 
   function renderSystem() {
@@ -162,16 +191,30 @@
     $("[data-alert-count]").hidden = openReports === 0;
   }
 
+  function showInvitationFromUrl() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("invite");
+    const email = params.get("email");
+    const role = params.get("role");
+    if (!id || !email || !role) return;
+    openModal("운영자 초대 확인", `<article class="card hero-card"><p class="eyebrow">${esc(role)}</p><h2>${esc(email)}</h2><p>오늘한입 운영자 콘솔 초대를 수락하면 지정된 권한으로 등록됩니다.</p></article><button class="primary-button full-button" type="button" data-admin-action="accept-invite" data-id="${esc(id)}" data-email="${esc(email)}" data-role="${esc(role)}">초대 수락</button><button class="secondary-button full-button" style="margin-top:8px" type="button" data-admin-action="dismiss-invite">나중에 하기</button>`);
+  }
+
   function handleAction(action, id, button) {
-    if (action === "export") { const rows = [["지표", "값"], ["게시물", contentRows().length], ["대기 신고", reports.filter(item => item.status !== "처리 완료").length], ["주문", userState.orders.length]]; const csv = rows.map(row => row.join(",")).join("\n"); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `오늘한입_운영리포트_${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href); toast("운영 리포트를 내려받았습니다."); return; }
+    if (action === "export") { const rows = [["지표", "값"], ["게시물", contentRows().length], ["대기 신고", reports.filter(item => item.status !== "처리 완료").length], ["주문", userState.orders.length]]; const csv = rows.map(row => row.join(",")).join("\n"); const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.href = url; link.download = `오늘한입_운영리포트_${new Date().toISOString().slice(0,10)}.csv`; link.hidden = true; document.body.append(link); link.click(); window.setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 1000); toast("운영 리포트를 내려받았습니다."); return; }
     if (action === "alerts") return openModal("운영 알림", `<div class="admin-list">${reports.filter(item => item.status !== "처리 완료").map(item => `<div class="sheet-row"><span>${icon("alert")}</span><span class="sheet-row-copy"><strong>${esc(item.reason)}</strong><small>${esc(item.target)} · ${esc(item.date)}</small></span></div>`).join("") || '<div class="admin-empty"><strong>새 운영 알림이 없습니다</strong>모든 신고가 처리되었습니다.</div>'}</div>`);
-    if (action === "view-content") { const post = contentRows().find(item => item.id === id); return openModal("콘텐츠 상세", `<div class="card hero-card"><p class="eyebrow">${esc(post.author)}</p><h2>${esc(post.title)}</h2><p>${esc(post.body || "사용자가 등록한 레시피 콘텐츠입니다.")}</p></div>`); }
+    if (action === "view-content") { const post = contentRows().find(item => item.id === id); if (!post) return toast("콘텐츠를 찾을 수 없습니다."); return openModal("콘텐츠 상세", `<div class="card hero-card"><p class="eyebrow">${esc(post.author)}</p><h2>${esc(post.title)}</h2><p>${esc(post.body || "사용자가 등록한 레시피 콘텐츠입니다.")}</p></div>`); }
     if (action === "toggle-content") { userState.hidden ||= {}; userState.hidden[id] ? delete userState.hidden[id] : userState.hidden[id] = true; saveUser(); saveAdmin(`콘텐츠 ${userState.hidden[id] ? "숨김" : "복구"}: ${id}`); renderContent(); renderDashboard(); toast(userState.hidden[id] ? "콘텐츠를 숨겼습니다." : "콘텐츠를 복구했습니다."); return; }
-    if (action === "report-detail") { const report = reports.find(item => item.id === id); return openModal("신고 검토", `<div class="sheet-list"><div class="sheet-row"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${esc(report.reason)}</strong><small>대상 ${esc(report.target)}</small></span></div><div class="sheet-row"><span>${icon("clock")}</span><span class="sheet-row-copy"><strong>접수 일시</strong><small>${esc(report.date)}</small></span></div></div>`); }
-    if (action === "resolve-report") { const report = reports.find(item => item.id === id); report.status = "처리 완료"; report.resolvedAt = new Date().toLocaleString("ko-KR"); saveReports(); saveAdmin(`신고 처리 완료: ${id}`); renderReports(); renderDashboard(); toast("신고 처리를 완료했습니다."); return; }
-    if (action === "order-status") { const order = userState.orders.find(item => item.id === id); const statuses = ["결제 완료", "상품 준비", "배송 중", "배송 완료", "주문 취소"]; return openModal("주문 상태 변경", `<div class="field"><label for="order-status-value">${esc(order.number)}</label><select id="order-status-value" data-order-status-value>${statuses.map(status => `<option ${status === order.status ? "selected" : ""}>${status}</option>`).join("")}</select></div><button class="primary-button full-button" type="button" data-admin-action="save-order-status" data-id="${id}">상태 저장</button>`); }
-    if (action === "save-order-status") { const order = userState.orders.find(item => item.id === id); order.status = $("[data-order-status-value]").value; saveUser(); saveAdmin(`주문 상태 변경: ${order.number} → ${order.status}`); closeModal(); renderOrders(); renderDashboard(); toast("주문 상태를 변경했습니다."); return; }
+    if (action === "report-detail") { const report = reports.find(item => item.id === id); if (!report) return toast("신고 정보를 찾을 수 없습니다."); return openModal("신고 검토", `<div class="sheet-list"><div class="sheet-row"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${esc(report.reason)}</strong><small>대상 ${esc(report.target)}</small></span></div><div class="sheet-row"><span>${icon("clock")}</span><span class="sheet-row-copy"><strong>접수 일시</strong><small>${esc(report.date)}</small></span></div></div>`); }
+    if (action === "resolve-report") { const report = reports.find(item => item.id === id); if (!report) return toast("신고 정보를 찾을 수 없습니다."); report.status = "처리 완료"; report.resolvedAt = new Date().toLocaleString("ko-KR"); saveReports(); saveAdmin(`신고 처리 완료: ${id}`); renderReports(); renderDashboard(); toast("신고 처리를 완료했습니다."); return; }
+    if (action === "order-status") { const order = userState.orders.find(item => item.id === id); if (!order) return toast("주문 정보를 찾을 수 없습니다."); const statuses = ["결제 완료", "상품 준비", "배송 중", "배송 완료", "주문 취소"]; return openModal("주문 상태 변경", `<div class="field"><label for="order-status-value">${esc(order.number)}</label><select id="order-status-value" data-order-status-value>${statuses.map(status => `<option ${status === order.status ? "selected" : ""}>${status}</option>`).join("")}</select></div><button class="primary-button full-button" type="button" data-admin-action="save-order-status" data-id="${id}">상태 저장</button>`); }
+    if (action === "save-order-status") { const order = userState.orders.find(item => item.id === id); if (!order) return toast("주문 정보를 찾을 수 없습니다."); order.status = $("[data-order-status-value]").value; saveUser({ title: "주문 상태 변경", body: `${order.number} 주문이 ${order.status} 상태로 변경되었습니다.` }); saveAdmin(`주문 상태 변경: ${order.number} → ${order.status}`); closeModal(); renderOrders(); renderDashboard(); toast("주문 상태를 변경했습니다."); return; }
+    if (action === "user-detail") { const user = adminState.users.find(item => item.id === id); if (!user) return toast("회원 정보를 찾을 수 없습니다."); const statuses = ["정상", "이용 제한", "탈퇴"]; return openModal("회원 관리", `<div class="sheet-list"><div class="sheet-row"><span>${icon("user")}</span><span class="sheet-row-copy"><strong>${esc(user.name)}</strong><small>@${esc(user.handle)} · ${esc(user.location)}</small></span></div></div><div class="field" style="margin-top:12px"><label for="user-status-value">계정 상태</label><select id="user-status-value" data-user-status-value>${statuses.map(status => `<option ${status === user.status ? "selected" : ""}>${status}</option>`).join("")}</select></div><button class="primary-button full-button" type="button" data-admin-action="save-user-status" data-id="${esc(id)}">상태 저장</button>`); }
+    if (action === "save-user-status") { const user = adminState.users.find(item => item.id === id); if (!user) return toast("회원 정보를 찾을 수 없습니다."); user.status = $("[data-user-status-value]").value; if (user.handle === userState.profile?.handle) saveUser({ title: "계정 상태 변경", body: `계정 상태가 ${user.status}(으)로 변경되었습니다.` }); saveAdmin(`회원 상태 변경: ${user.handle} → ${user.status}`); closeModal(); renderUsers(); toast("회원 상태를 변경했습니다."); return; }
     if (action === "invite") return openModal("운영자 초대", `<form data-invite-form><div class="field"><label for="invite-email">이메일</label><input id="invite-email" name="email" type="email" required placeholder="operator@example.com"></div><div class="field"><label for="invite-role">권한</label><select id="invite-role" name="role"><option>콘텐츠 운영자</option><option>주문 운영자</option><option>전체 관리자</option></select></div><button class="primary-button full-button" type="submit">초대 링크 생성</button></form>`);
+    if (action === "copy-invite") { copyText(button.dataset.value).then(copied => toast(copied ? "초대 링크를 복사했습니다." : "초대 링크 복사에 실패했습니다.")); return; }
+    if (action === "accept-invite") { adminState.operators ||= []; const existing = adminState.operators.find(operator => operator.email === button.dataset.email); if (existing) { existing.role = button.dataset.role; existing.status = "활성"; } else { adminState.operators.push({ id: uid("operator"), email: button.dataset.email, role: button.dataset.role, status: "활성" }); } const invitation = (adminState.invitations || []).find(item => item.id === id); if (invitation) { invitation.status = "수락"; invitation.acceptedAt = new Date().toISOString(); } saveAdmin(`운영자 초대 수락: ${button.dataset.email} (${button.dataset.role})`); history.replaceState(null, "", location.pathname); closeModal(); toast("운영자 초대를 수락했습니다."); return; }
+    if (action === "dismiss-invite") { history.replaceState(null, "", location.pathname); closeModal(); return; }
     if (action === "point-adjust") return openModal("포인트 조정", `<form data-point-form><div class="field"><label for="point-user">회원</label><select id="point-user" name="user">${adminState.users.map(user => `<option>${esc(user.name)}</option>`).join("")}</select></div><div class="field"><label for="point-type">구분</label><select id="point-type" name="type"><option>적립</option><option>차감</option></select></div><div class="field"><label for="point-amount">포인트</label><input id="point-amount" name="amount" type="number" min="1" max="100000" required></div><div class="field"><label for="point-reason">사유</label><input id="point-reason" name="reason" maxlength="60" required></div><button class="primary-button full-button" type="submit">원장에 반영</button></form>`);
     if (action === "toggle-system") { const key = button.dataset.key; adminState.settings[key] = !adminState.settings[key]; saveAdmin(`시스템 기능 ${adminState.settings[key] ? "사용" : "중지"}: ${key}`); renderSystem(); toast("설정 상태를 변경했습니다."); return; }
     if (action === "save-system") { saveAdmin("시스템 설정 저장"); renderSystem(); toast("시스템 설정을 저장했습니다."); }
@@ -185,16 +228,40 @@
     const action = event.target.closest("[data-admin-action]");
     if (action) handleAction(action.dataset.adminAction, action.dataset.id, action);
   });
-  document.addEventListener("input", event => { if (event.target.matches("[data-content-search]")) renderContent(); if (event.target.matches("[data-order-search]")) renderOrders(); });
-  document.addEventListener("change", event => { if (event.target.matches("[data-content-status]")) renderContent(); if (event.target.matches("[data-report-status]")) renderReports(); if (event.target.matches("[data-order-status]")) renderOrders(); });
+  document.addEventListener("input", event => { if (event.target.matches("[data-content-search]")) renderContent(); if (event.target.matches("[data-order-search]")) renderOrders(); if (event.target.matches("[data-user-search]")) renderUsers(); });
+  document.addEventListener("change", event => { if (event.target.matches("[data-content-status]")) renderContent(); if (event.target.matches("[data-report-status]")) renderReports(); if (event.target.matches("[data-order-status]")) renderOrders(); if (event.target.matches("[data-user-status]")) renderUsers(); });
   document.addEventListener("submit", event => {
     event.preventDefault();
-    if (event.target.matches("[data-invite-form]")) { const data = Object.fromEntries(new FormData(event.target)); saveAdmin(`운영자 초대 링크 생성: ${data.email} (${data.role})`); closeModal(); toast("초대 링크를 생성했습니다."); }
-    if (event.target.matches("[data-point-form]")) { const data = Object.fromEntries(new FormData(event.target)); const amount = Number(data.amount); adminState.pointLedger.unshift({ id: uid("PT"), user: data.user, type: data.type, amount, reason: data.reason, date: new Date().toLocaleString("ko-KR") }); if (data.user === userState.profile?.name) { userState.profile.points += data.type === "적립" ? amount : -amount; saveUser(); } saveAdmin(`포인트 ${data.type}: ${data.user} ${amount}P`); closeModal(); renderPoints(); toast("포인트 원장에 반영했습니다."); }
+    if (event.target.matches("[data-invite-form]")) {
+      const data = Object.fromEntries(new FormData(event.target));
+      const invitation = { id: uid("invite"), email: data.email.trim().toLowerCase(), role: data.role, status: "대기", createdAt: new Date().toISOString() };
+      adminState.invitations ||= [];
+      adminState.invitations.unshift(invitation);
+      const url = new URL(location.href); url.search = ""; url.searchParams.set("invite", invitation.id); url.searchParams.set("email", invitation.email); url.searchParams.set("role", invitation.role);
+      invitation.url = url.href;
+      saveAdmin(`운영자 초대 링크 생성: ${invitation.email} (${invitation.role})`);
+      openModal("초대 링크 생성 완료", `<div class="field"><label for="invite-link">초대 링크</label><input id="invite-link" readonly value="${esc(invitation.url)}"></div><button class="primary-button full-button" type="button" data-admin-action="copy-invite" data-value="${esc(invitation.url)}">링크 복사</button>`);
+      toast("초대 링크를 생성했습니다.");
+    }
+    if (event.target.matches("[data-point-form]")) {
+      const data = Object.fromEntries(new FormData(event.target));
+      const amount = Number(data.amount);
+      if (!Number.isFinite(amount) || amount < 1) return toast("1포인트 이상 입력해 주세요.");
+      if (data.user === userState.profile?.name && data.type === "차감" && amount > Number(userState.profile.points || 0)) return toast("보유 포인트보다 많이 차감할 수 없습니다.");
+      adminState.pointLedger.unshift({ id: uid("PT"), user: data.user, type: data.type, amount, reason: data.reason.trim(), date: new Date().toLocaleString("ko-KR") });
+      if (data.user === userState.profile?.name) {
+        userState.profile.points += data.type === "적립" ? amount : -amount;
+        userState.pointHistory ||= [];
+        userState.pointHistory.unshift({ id: uid("PT"), type: data.type, amount, reason: data.reason.trim(), date: new Date().toLocaleString("ko-KR") });
+        saveUser({ title: `포인트 ${data.type}`, body: `${data.reason.trim()} 사유로 ${amount.toLocaleString("ko-KR")}P가 ${data.type === "적립" ? "적립" : "차감"}되었습니다.` });
+      }
+      saveAdmin(`포인트 ${data.type}: ${data.user} ${amount}P`); closeModal(); renderPoints(); toast("포인트 원장에 반영했습니다.");
+    }
   });
   window.addEventListener("storage", event => { if (event.key === STATE_KEY) userState = parse(STATE_KEY, defaultUserState); if (event.key === REPORT_KEY) { try { reports = JSON.parse(localStorage.getItem(REPORT_KEY)) || []; } catch { reports = []; } } renderPanel($("[data-admin-panel].active").dataset.adminPanel); });
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
 
   hydrateIcons();
   navigate("dashboard");
+  showInvitationFromUrl();
 })();

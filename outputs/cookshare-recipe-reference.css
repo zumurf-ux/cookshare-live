@@ -11,6 +11,16 @@
   --recipe-shadow: 0 8px 24px rgba(48, 37, 23, .07);
 }
 
+.recipe-reference-page .row-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+.recipe-reference-page .small-button { min-height: 36px; padding: 0 10px; border: 1px solid var(--recipe-line); border-radius: 8px; background: #fff; color: #39433f; font-size: 12px; font-weight: 700; }
+.recipe-reference-page .small-button:focus-visible { outline: 3px solid rgba(55, 92, 76, .2); outline-offset: 2px; }
+.recipe-reference-page.service-maintenance .app-topbar::after { content: "서비스 점검 중"; position: absolute; right: 20px; bottom: 8px; color: #8d3f2e; font-size: 11px; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .recipe-reference-page .sheet-row:has(.row-actions) { align-items: flex-start; flex-wrap: wrap; }
+  .recipe-reference-page .sheet-row:has(.row-actions) .row-actions { width: 100%; padding-left: 34px; }
+}
+
 body.recipe-reference-page {
   background: #f3f2ef;
   color: var(--recipe-ink);
