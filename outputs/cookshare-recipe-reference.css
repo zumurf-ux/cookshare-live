@@ -2778,7 +2778,10 @@ body.recipe-reference-page {
 }
 @media (min-width: 720px) {
   .recipe-reference-page .app-main { height: calc(100dvh - 150px); }
+  .recipe-reference-page [data-screen="market"] .product-card:first-child .product-thumb { aspect-ratio: 33 / 20; }
 }
+
+.recipe-reference-page [data-screen="market"] .section-head h2::after { display: none; }
 
 /* Responsive cascade lock. */
 @media (min-width: 600px) and (max-width: 959px) {
