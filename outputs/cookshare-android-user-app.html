@@ -7,7 +7,7 @@
   <title>오늘한입 · 사용자 앱</title>
   <link rel="manifest" href="cookshare-manifest.webmanifest">
   <link rel="stylesheet" href="cookshare-ui.css?v=4">
-  <link rel="stylesheet" href="cookshare-recipe-reference.css?v=20">
+  <link rel="stylesheet" href="cookshare-recipe-reference.css?v=21">
 </head>
 <body class="user-page recipe-reference-page">
   <a class="skip-link" href="#app-main">본문으로 이동</a>
@@ -88,8 +88,14 @@
         <article class="card profile-card section">
           <div class="profile-head"><div class="avatar">한끼</div><div class="profile-copy"><h2 data-profile-name>한끼연구소</h2><p data-profile-handle>@one_meal_lab · 서울 마포구</p></div><button class="secondary-button" type="button" data-action="edit-profile">수정</button></div>
         </article>
+        <article class="card account-card section" aria-labelledby="account-card-title">
+          <div class="account-card-head"><div><p class="account-kicker">계정 및 로그인</p><h2 id="account-card-title" data-account-handle>@one_meal_lab</h2></div><span class="account-status" data-account-status>로그인 중</span></div>
+          <dl class="account-details"><div><dt>휴대폰</dt><dd data-account-phone>등록 정보 확인 중</dd></div><div><dt>로그인 방식</dt><dd>사용자 ID 또는 휴대폰 + PIN</dd></div></dl>
+          <div class="account-actions"><button class="secondary-button" type="button" data-action="change-pin" data-account-pin-action>PIN 변경</button><button class="text-button account-logout" type="button" data-action="logout">로그아웃</button></div>
+        </article>
         <div class="stat-grid section"><article class="card stat-card"><strong data-post-count>0</strong><span>게시물</span></article><article class="card stat-card"><strong data-saved-count>0</strong><span>저장</span></article><article class="card stat-card"><strong data-point-count>12,450</strong><span>포인트</span></article></div>
         <div class="card menu-list">
+          <button class="menu-row" type="button" data-action="account-info"><span data-icon="shield"></span><strong>계정 및 로그인</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="my-posts"><span data-icon="grid"></span><strong>내 게시물</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="saved-recipes"><span data-icon="bookmark"></span><strong>저장한 레시피</strong><span data-icon="chevron"></span></button>
           <button class="menu-row" type="button" data-action="orders"><span data-icon="box"></span><strong>주문 내역</strong><span data-icon="chevron"></span></button>
@@ -110,6 +116,6 @@
     <div class="sheet-root" data-sheet-root aria-hidden="true"><button class="sheet-backdrop" type="button" data-close-sheet aria-label="창 닫기"></button><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><header class="sheet-head"><span></span><h2 id="sheet-title" data-sheet-title>상세 정보</h2><button class="icon-button" type="button" data-close-sheet aria-label="닫기"><span data-icon="close"></span></button></header><div class="sheet-body" data-sheet-body></div></section></div>
     <div class="toast" role="status" aria-live="polite" data-toast></div>
   </div>
-  <script src="cookshare-user-app-live.js?v=10"></script>
+  <script src="cookshare-user-app-live.js?v=11"></script>
 </body>
 </html>

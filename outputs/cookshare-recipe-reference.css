@@ -1812,6 +1812,39 @@ body.recipe-reference-page {
   .recipe-reference-page .app-main { height: auto; }
 }
 
+/* Account and authentication visibility. */
+.recipe-reference-page .auth-intro { margin-bottom: 20px; }
+.recipe-reference-page .auth-intro strong { display: block; margin-bottom: 6px; color: #202824; font-size: 19px; letter-spacing: -.03em; }
+.recipe-reference-page .auth-intro p { margin: 0; color: #6e7672; font-size: 13px; line-height: 1.55; }
+.recipe-reference-page [data-screen="profile"] > .account-card { min-height: 0; padding: 20px; border: 1px solid #dedfdc; border-radius: 18px; background: #fff; box-shadow: none !important; }
+.recipe-reference-page .account-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.recipe-reference-page .account-kicker { margin: 0 0 5px; color: #767b78; font-size: 12px; font-weight: 700; }
+.recipe-reference-page .account-card h2 { margin: 0; color: #202421; font-size: 18px; letter-spacing: -.02em; }
+.recipe-reference-page .account-status { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; background: #edf5ef; color: #366046; font-size: 11px; font-weight: 800; }
+.recipe-reference-page .account-status[data-state="warning"] { background: #fff4dc; color: #8b5e16; }
+.recipe-reference-page .account-details { display: grid; gap: 9px; margin: 18px 0; padding: 14px 0; border-top: 1px solid #ecece9; border-bottom: 1px solid #ecece9; }
+.recipe-reference-page .account-details > div { display: grid; grid-template-columns: 84px 1fr; gap: 12px; }
+.recipe-reference-page .account-details dt { color: #7a7e7b; font-size: 12px; }
+.recipe-reference-page .account-details dd { margin: 0; color: #303532; font-size: 12px; font-weight: 650; text-align: right; }
+.recipe-reference-page .account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.recipe-reference-page .account-actions button { min-height: 44px; }
+.recipe-reference-page .account-logout { border: 1px solid #dedfdc; border-radius: 10px; color: #5d625f; }
+.recipe-reference-page .account-sheet-summary { padding: 20px; border: 1px solid #dedfdc; border-radius: 16px; background: #fff; }
+.recipe-reference-page .account-sheet-summary > p { margin: 0 0 5px; color: #777d79; font-size: 12px; }
+.recipe-reference-page .account-sheet-summary h2 { margin: 0 0 18px; font-size: 22px; }
+.recipe-reference-page .account-sheet-summary dl { display: grid; gap: 12px; margin: 0; }
+.recipe-reference-page .account-sheet-summary dl > div { display: flex; justify-content: space-between; gap: 18px; }
+.recipe-reference-page .account-sheet-summary dt { color: #7a7f7c; font-size: 12px; }
+.recipe-reference-page .account-sheet-summary dd { margin: 0; color: #2c312e; font-size: 12px; font-weight: 700; text-align: right; }
+.recipe-reference-page .account-sheet-actions { display: grid; gap: 8px; margin-top: 12px; }
+
+@media (min-width: 960px) {
+  .recipe-reference-page [data-screen="profile"].active { grid-template-rows: auto auto 1fr; }
+  .recipe-reference-page [data-screen="profile"] > .profile-card { grid-row: 1 / 4; }
+  .recipe-reference-page [data-screen="profile"] > .account-card { grid-column: 2; grid-row: 2; margin-bottom: 0; }
+  .recipe-reference-page [data-screen="profile"] > .menu-list { grid-row: 3; }
+}
+
 .recipe-reference-page .category-row {
   display: grid;
   gap: 12px;

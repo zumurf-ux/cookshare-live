@@ -196,6 +196,7 @@
       if (button.dataset.authMode === "signup") button.disabled = !signupAllowed;
     });
     $("[data-auth-body]").innerHTML = mode === "signup" ? `<form class="auth-form" data-signup-form><div class="field"><label for="signup-name">닉네임</label><input id="signup-name" name="name" maxlength="20" required autocomplete="name" placeholder="오늘한입에서 사용할 이름"></div><div class="field"><label for="signup-handle">사용자 ID</label><input id="signup-handle" name="handle" minlength="3" maxlength="24" required pattern="[a-z0-9_]+" autocapitalize="none" autocomplete="username" placeholder="영문 소문자, 숫자, 밑줄"></div><div class="field"><label for="signup-phone">휴대폰 번호</label><input id="signup-phone" name="phone" type="tel" inputmode="numeric" required autocomplete="tel" placeholder="01012345678"></div><div class="field"><label for="signup-pin">로그인 PIN</label><input id="signup-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="new-password" placeholder="숫자 4자리"></div><label class="auth-check"><input name="terms" type="checkbox" required>서비스 이용약관과 개인정보 처리 안내에 동의합니다.</label><button class="primary-button full-button" type="submit">간편 회원가입</button></form><p class="auth-help">가입 후 이 기기에서는 로그인 상태가 유지됩니다.</p>` : `<form class="auth-form" data-login-form><div class="field"><label for="login-id">사용자 ID 또는 휴대폰</label><input id="login-id" name="identifier" required autocomplete="username" placeholder="사용자 ID 또는 휴대폰 번호"></div><div class="field"><label for="login-pin">로그인 PIN</label><input id="login-pin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="4" required pattern="[0-9]{4}" autocomplete="current-password" placeholder="숫자 4자리"></div><button class="primary-button full-button" type="submit">로그인</button></form><p class="auth-help">PIN을 잊었다면 운영자에게 계정 확인을 요청해 주세요.</p>`;
+    $("[data-auth-body]").insertAdjacentHTML("afterbegin", mode === "signup" ? `<div class="auth-intro"><strong>간편하게 시작하세요</strong><p>게시물, 저장 목록과 주문 내역을 내 계정에 보관합니다.</p></div>` : `<div class="auth-intro"><strong>로그인 후 이용해 주세요</strong><p>사용자 ID 또는 휴대폰 번호와 4자리 PIN을 입력하세요.</p></div>`);
     setAuthStatus(!signupAllowed ? "현재 신규 회원가입이 일시 중지되었습니다." : "");
     $("[data-auth-body] input")?.focus();
   }
@@ -385,6 +386,11 @@
     $$('[data-point-count]').forEach(node => node.textContent = state.profile.points.toLocaleString("ko-KR"));
     $$('[data-profile-name]').forEach(node => node.textContent = state.profile.name);
     $$('[data-profile-handle]').forEach(node => node.textContent = `@${state.profile.handle} · ${state.profile.location}`);
+    const account = currentAccount();
+    $$('[data-account-handle]').forEach(node => node.textContent = account ? `@${account.handle}` : "로그인이 필요합니다");
+    $$('[data-account-phone]').forEach(node => node.textContent = account?.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록");
+    $$('[data-account-status]').forEach(node => { node.textContent = account?.needsPin ? "PIN 설정 필요" : account ? "로그인 중" : "로그아웃"; node.dataset.state = account?.needsPin ? "warning" : account ? "active" : "inactive"; });
+    $$('[data-account-pin-action]').forEach(node => node.textContent = account?.needsPin ? "PIN 설정" : "PIN 변경");
   }
 
   function recipeById(id) {
@@ -465,6 +471,14 @@
     openSheet("설정", `<div class="sheet-list">${switchButton("notifications", "활동 알림", "댓글, 저장, 챌린지 알림")}${switchButton("marketing", "혜택 알림", "마켓 할인과 이벤트 소식")}${switchButton("privateProfile", "비공개 프로필", "승인한 사용자만 게시물 확인")}<button class="menu-row" type="button" data-action="hidden-posts"><span>${icon("image")}</span><span class="sheet-row-copy"><strong>숨긴 게시물 관리</strong><small>피드에서 숨긴 콘텐츠를 다시 표시합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="change-pin"><span>${icon("shield")}</span><span class="sheet-row-copy"><strong>${account?.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경"}</strong><small>숫자 4자리 PIN으로 계정을 보호합니다.</small></span><span>${icon("chevron")}</span></button><button class="menu-row" type="button" data-action="logout"><span>${icon("user")}</span><span class="sheet-row-copy"><strong>로그아웃</strong><small>@${esc(state.profile.handle)} 계정에서 로그아웃합니다.</small></span><span>${icon("chevron")}</span></button></div><div style="height:12px"></div><button class="danger-button full-button" type="button" data-action="reset-data">앱 데이터 초기화</button>`);
   }
 
+  function showAccountInfo() {
+    const account = currentAccount();
+    if (!account) return renderAuth("login");
+    const phone = account.phone ? `${account.phone.slice(0, 3)}-****-${account.phone.slice(-4)}` : "휴대폰 번호 미등록";
+    const joined = account.createdAt ? new Date(account.createdAt).toLocaleDateString("ko-KR") : "기존 회원";
+    openSheet("계정 및 로그인", `<article class="account-sheet-summary"><p>현재 로그인 계정</p><h2>@${esc(account.handle)}</h2><dl><div><dt>닉네임</dt><dd>${esc(account.name)}</dd></div><div><dt>휴대폰</dt><dd>${esc(phone)}</dd></div><div><dt>가입일</dt><dd>${esc(joined)}</dd></div></dl></article><div class="account-sheet-actions"><button class="primary-button full-button" type="button" data-action="change-pin">${account.needsPin ? "로그인 PIN 설정" : "로그인 PIN 변경"}</button><button class="secondary-button full-button" type="button" data-action="logout">로그아웃</button></div>`);
+  }
+
   function showProfileForm() {
     openSheet("프로필 수정", `<form data-profile-form><div class="field"><label for="profile-name">닉네임</label><input id="profile-name" name="name" required maxlength="20" value="${esc(state.profile.name)}"></div><div class="field"><label for="profile-handle">사용자 ID</label><input id="profile-handle" name="handle" required maxlength="24" value="${esc(state.profile.handle)}"></div><div class="field"><label for="profile-location">활동 지역</label><input id="profile-location" name="location" maxlength="30" value="${esc(state.profile.location)}"></div><button class="primary-button full-button" type="submit">저장</button></form>`);
   }
@@ -498,6 +512,7 @@
     if (action === "order-detail") return showOrder(id);
     if (action === "cancel-order") { const order = state.orders.find(item => item.id === id); if (!order) return; if (!confirm("이 주문을 취소할까요?")) return; order.status = "주문 취소"; saveState(); toast("주문을 취소했습니다."); return showOrder(id); }
     if (action === "settings") return showSettings();
+    if (action === "account-info") return showAccountInfo();
     if (action === "change-pin") return showPinForm();
     if (action === "logout") { const account = currentAccount(); if (account?.needsPin) { toast("로그아웃 전에 로그인 PIN을 설정해 주세요."); return showPinForm(); } saveState(); localStorage.removeItem(SESSION_KEY); closeSheet(); renderAuth("login"); setAuthStatus("안전하게 로그아웃되었습니다."); return; }
     if (action === "edit-profile") return showProfileForm();
